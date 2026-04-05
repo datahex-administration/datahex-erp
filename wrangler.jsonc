@@ -3,7 +3,10 @@
   "name": "data-hack-crp",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-04-05",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "no_handle_cross_request_promise_resolution"
+  ],
   "keep_vars": true,
   "upload_source_maps": true,
   "assets": {

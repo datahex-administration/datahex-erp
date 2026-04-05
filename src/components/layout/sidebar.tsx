@@ -17,7 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
 
@@ -48,14 +48,18 @@ export function Sidebar({
     Object.fromEntries(navigationGroups.map((group) => [group.id, group.id === "overview"]))
   );
 
-  const visibleGroups = navigationGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter(
-        (item) => !item.permission || hasPermission(item.permission)
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+  const visibleGroups = useMemo(
+    () =>
+      navigationGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(
+            (item) => !item.permission || hasPermission(item.permission)
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
+    [hasPermission]
+  );
 
   useEffect(() => {
     if (desktopCollapsed) {
