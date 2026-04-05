@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Data Hack CRP
+
+This repository contains a multi-tenant ERP application built with Next.js 16, React 19, MongoDB, and a custom PIN-based authentication flow.
 
 ## Getting Started
 
@@ -16,20 +18,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Main Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` starts local Next.js development.
+- `npm run build` runs the standard Next.js production build.
+- `npm run preview` builds the app for Cloudflare Workers and runs a local Worker preview.
+- `npm run deploy` builds and deploys the app to Cloudflare Workers.
 
-## Learn More
+## Cloudflare Workers
 
-To learn more about Next.js, take a look at the following resources:
+The project is prepared for Cloudflare Workers deployment through OpenNext.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deployment notes and the exact CLI steps are documented in [docs/cloudflare-workers.md](docs/cloudflare-workers.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
+- MongoDB remains the current database.
+- SMTP email remains enabled through environment variables.
+- WhatsApp configuration is optional and can be added later.
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 

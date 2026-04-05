@@ -30,6 +30,8 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Data Hack CRP";
+
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
   { name: "Companies", href: "/dashboard/companies", icon: Building2, permission: "companies:read" },
@@ -81,7 +83,7 @@ export function Sidebar() {
                 <Building2 className="w-4 h-4 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="font-semibold text-sm leading-none">Datahex ERP</h1>
+                <h1 className="font-semibold text-sm leading-none">{appName}</h1>
                 {company && (
                   <p className="text-xs text-muted-foreground mt-0.5">{company.name}</p>
                 )}

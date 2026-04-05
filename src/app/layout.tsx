@@ -5,6 +5,8 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Data Hack CRP";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Datahex ERP",
-  description: "Multi-tenant ERP system for Datahex",
+  title: appName,
+  description: `${appName} multi-tenant ERP system`,
 };
 
 export default function RootLayout({

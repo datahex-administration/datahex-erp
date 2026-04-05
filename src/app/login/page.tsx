@@ -16,6 +16,8 @@ import {
 import { Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Data Hack CRP";
+
 export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -113,7 +115,7 @@ export default function LoginPage() {
           <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-2">
             <Building2 className="w-8 h-8 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">Datahex ERP</CardTitle>
+          <CardTitle className="text-2xl font-bold">{appName}</CardTitle>
           <p className="text-muted-foreground text-sm">
             Enter your credentials to access the dashboard
           </p>

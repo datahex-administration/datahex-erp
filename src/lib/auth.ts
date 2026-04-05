@@ -4,6 +4,11 @@ import bcrypt from "bcryptjs";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
 const COOKIE_NAME = "datahex-session";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+const useSecureCookies =
+  process.env.NODE_ENV === "production" &&
+  !appUrl.startsWith("http://localhost") &&
+  !appUrl.startsWith("http://127.0.0.1");
 
 export interface SessionPayload {
   userId: string;
@@ -37,7 +42,7 @@ export async function createSession(payload: SessionPayload): Promise<string> {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: useSecureCookies,
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: "/",
