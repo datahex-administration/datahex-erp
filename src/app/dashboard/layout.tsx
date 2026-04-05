@@ -3,13 +3,18 @@
 import { useAuth } from "@/components/providers/auth-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CommandPalette } from "@/components/command-palette";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Loader2, Menu, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, company, loading } = useAuth();
   const router = useRouter();
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,11 +33,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <Sidebar />
-      <CommandPalette />
-      <main className="md:ml-[260px] transition-all duration-300">
-        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50/80">
+      <Sidebar
+        desktopCollapsed={desktopCollapsed}
+        mobileOpen={mobileOpen}
+        onDesktopToggle={() => setDesktopCollapsed((current) => !current)}
+        onMobileClose={() => setMobileOpen(false)}
+      />
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+      />
+
+      <main
+        className={cn(
+          "min-h-screen transition-[margin-left] duration-300",
+          desktopCollapsed ? "md:ml-24" : "md:ml-80"
+        )}
+      >
+        <div className="sticky top-0 z-30 border-b border-border/70 bg-gray-50/95 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
+            <Button
+              variant="outline"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileOpen(true)}
+              title="Open menu"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 flex-1 justify-between rounded-2xl px-4 text-left text-muted-foreground shadow-sm"
+              onClick={() => setCommandPaletteOpen(true)}
+            >
+              <span className="flex items-center gap-3 overflow-hidden">
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate">Search menus, pages, and quick actions</span>
+              </span>
+              <span className="hidden items-center gap-1 rounded-lg bg-muted px-2 py-1 text-xs font-medium text-muted-foreground sm:flex">
+                <kbd>⌘</kbd>
+                <kbd>K</kbd>
+              </span>
+            </Button>
+
+            <div className="hidden min-w-0 rounded-2xl border border-border/70 bg-white px-4 py-2 text-right shadow-sm lg:block">
+              <p className="truncate text-sm font-semibold">{company?.name || "Datahex ERP"}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.role.replace("_", " ")}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
           {children}
         </div>
       </main>

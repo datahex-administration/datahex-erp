@@ -2,25 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+import { useAuth } from "@/components/providers/auth-provider";
 import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  Wallet,
-  CalendarDays,
-  FolderKanban,
-  FileText,
-  Receipt,
-  CreditCard,
-  Bell,
-  Settings,
-  Contact,
-  MessageSquare,
-  Shield,
-  Search,
-  Plus,
-  ListTodo,
-} from "lucide-react";
+  navigationGroups,
+  quickActionItems,
+} from "@/components/layout/navigation";
 
 interface CommandItem {
   id: string;
@@ -32,43 +19,53 @@ interface CommandItem {
   group: string;
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+interface CommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
+  const { hasPermission } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const nav = useCallback(
     (path: string) => {
-      setOpen(false);
+      onOpenChange(false);
+      setQuery("");
       router.push(path);
     },
-    [router]
+    [onOpenChange, router]
   );
 
   const commands: CommandItem[] = [
-    // Navigation
-    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, action: () => nav("/dashboard"), group: "Navigation", keywords: ["home", "overview"] },
-    { id: "companies", label: "Companies", icon: <Building2 className="h-4 w-4" />, action: () => nav("/dashboard/companies"), group: "Navigation", keywords: ["organizations"] },
-    { id: "employees", label: "Employees", icon: <Users className="h-4 w-4" />, action: () => nav("/dashboard/employees"), group: "Navigation", keywords: ["staff", "team"] },
-    { id: "salary", label: "Salary Management", icon: <Wallet className="h-4 w-4" />, action: () => nav("/dashboard/salary"), group: "Navigation", keywords: ["payroll", "payment"] },
-    { id: "leaves", label: "Leave Management", icon: <CalendarDays className="h-4 w-4" />, action: () => nav("/dashboard/leaves"), group: "Navigation", keywords: ["vacation", "time off"] },
-    { id: "clients", label: "Clients", icon: <Contact className="h-4 w-4" />, action: () => nav("/dashboard/clients"), group: "Navigation", keywords: ["customers"] },
-    { id: "projects", label: "Projects", icon: <FolderKanban className="h-4 w-4" />, action: () => nav("/dashboard/projects"), group: "Navigation", keywords: ["kanban", "tasks"] },
-    { id: "tasks", label: "Daily Tasks", icon: <ListTodo className="h-4 w-4" />, action: () => nav("/dashboard/tasks"), group: "Navigation", keywords: ["todo", "work log"] },
-    { id: "invoices", label: "Invoices", icon: <FileText className="h-4 w-4" />, action: () => nav("/dashboard/invoices"), group: "Navigation", keywords: ["billing", "payment"] },
-    { id: "expenses", label: "Expenses", icon: <Receipt className="h-4 w-4" />, action: () => nav("/dashboard/expenses"), group: "Navigation", keywords: ["costs", "spending"] },
-    { id: "subscriptions", label: "Subscriptions", icon: <CreditCard className="h-4 w-4" />, action: () => nav("/dashboard/subscriptions"), group: "Navigation", keywords: ["services", "hosting", "domain"] },
-    { id: "chat", label: "Chat", icon: <MessageSquare className="h-4 w-4" />, action: () => nav("/dashboard/chat"), group: "Navigation", keywords: ["messages"] },
-    { id: "notifications", label: "Notifications", icon: <Bell className="h-4 w-4" />, action: () => nav("/dashboard/notifications"), group: "Navigation", keywords: ["alerts"] },
-    { id: "audit-log", label: "Audit Log", icon: <Shield className="h-4 w-4" />, action: () => nav("/dashboard/audit-log"), group: "Navigation", keywords: ["activity", "history"] },
-    { id: "settings", label: "Settings", icon: <Settings className="h-4 w-4" />, action: () => nav("/dashboard/settings"), group: "Navigation", keywords: ["users", "roles", "config"] },
-    // Quick Actions
-    { id: "new-employee", label: "Add Employee", icon: <Plus className="h-4 w-4" />, action: () => nav("/dashboard/employees/new"), group: "Quick Actions", keywords: ["create employee", "hire"] },
-    { id: "new-project", label: "New Project", icon: <Plus className="h-4 w-4" />, action: () => nav("/dashboard/projects/new"), group: "Quick Actions", keywords: ["create project"] },
-    { id: "new-invoice", label: "New Invoice", icon: <Plus className="h-4 w-4" />, action: () => nav("/dashboard/invoices/new"), group: "Quick Actions", keywords: ["create invoice", "bill"] },
+    ...navigationGroups.flatMap((group) =>
+      group.items
+        .filter((item) => !item.permission || hasPermission(item.permission))
+        .map((item) => ({
+          id: item.href,
+          label: item.name,
+          description: item.description,
+          icon: <item.icon className="h-4 w-4" />,
+          action: () => nav(item.href),
+          keywords: item.keywords,
+          group: group.label,
+        }))
+    ),
+    ...quickActionItems
+      .filter((item) => !item.permission || hasPermission(item.permission))
+      .map((item) => ({
+        id: item.href,
+        label: item.name,
+        description: item.description,
+        icon: <item.icon className="h-4 w-4" />,
+        action: () => nav(item.href),
+        keywords: item.keywords,
+        group: "Quick Actions",
+      })),
   ];
 
   const filtered = query
@@ -93,26 +90,28 @@ export function CommandPalette() {
 
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query]);
+  }, [open, query]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        onOpenChange(!open);
         setQuery("");
       }
       if (e.key === "Escape") {
-        setOpen(false);
+        onOpenChange(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [onOpenChange, open]);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      setQuery("");
     }
   }, [open]);
 
@@ -141,7 +140,7 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg">
         <div className="bg-white rounded-xl shadow-2xl border overflow-hidden">
           {/* Search Input */}

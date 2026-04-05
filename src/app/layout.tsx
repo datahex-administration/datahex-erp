@@ -5,7 +5,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "Data Hack CRP";
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

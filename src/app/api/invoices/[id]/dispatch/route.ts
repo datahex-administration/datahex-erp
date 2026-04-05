@@ -69,9 +69,8 @@ export async function POST(
   const totalLabel = `${currency} ${invoice.total?.toLocaleString()}`;
   const dueDateLabel = format(new Date(invoice.dueDate), "dd MMM yyyy");
   const issueDateLabel = format(new Date(invoice.issueDate), "dd MMM yyyy");
-  const invoiceUrl = process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/invoices/${invoice._id}`
-    : "";
+  const appOrigin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || "";
+  const invoiceUrl = appOrigin ? `${appOrigin}/dashboard/invoices/${invoice._id}` : "";
 
   const whatsappText = [
     `${company?.name || appName} invoice ${invoice.invoiceNumber}`,

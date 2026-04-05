@@ -16,7 +16,7 @@ import {
 import { Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "Data Hack CRP";
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
 
 export default function LoginPage() {
   const { login } = useAuth();

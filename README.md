@@ -1,4 +1,4 @@
-## Data Hack CRP
+## Datahex ERP
 
 This repository contains a multi-tenant ERP application built with Next.js 16, React 19, MongoDB, and a custom PIN-based authentication flow.
 
