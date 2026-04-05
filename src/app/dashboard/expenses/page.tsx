@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -73,6 +75,9 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -89,15 +94,25 @@ export default function ExpensesPage() {
   });
 
   useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
+    if (search) params.set("search", search);
+    if (typeFilter !== "all") params.set("type", typeFilter);
+    if (statusFilter !== "all") params.set("status", statusFilter);
     Promise.all([
-      fetch("/api/expenses").then((r) => r.json()),
+      fetch(`/api/expenses?${params}`).then((r) => r.json()),
       fetch("/api/projects").then((r) => r.json()),
     ]).then(([e, p]) => {
-      setExpenses(Array.isArray(e) ? e : []);
-      setProjects(Array.isArray(p) ? p : []);
+      setExpenses(e.data ?? (Array.isArray(e) ? e : []));
+      setTotalPages(e.totalPages ?? 1);
+      setTotal(e.total ?? 0);
+      setProjects(Array.isArray(p) ? p : (p.data ?? []));
       setLoading(false);
     });
-  }, []);
+  }, [page, search, typeFilter, statusFilter]);
+
+  useEffect(() => { setPage(1); }, [search, typeFilter, statusFilter]);
 
   const handleCreate = async () => {
     setSaving(true);
@@ -120,11 +135,10 @@ export default function ExpensesPage() {
       body: JSON.stringify(payload),
     });
     if (res.ok) {
-      const exp = await res.json();
-      setExpenses((prev) => [exp, ...prev]);
       setDialogOpen(false);
       setForm({ category: "", description: "", amount: "", currency: "INR", date: format(new Date(), "yyyy-MM-dd"), projectId: "", type: "general", isRecurring: false, frequency: "monthly" });
       toast.success("Expense recorded");
+      setPage(1);
     } else {
       const data = await res.json();
       toast.error(data.error || "Failed to add expense");
@@ -154,16 +168,6 @@ export default function ExpensesPage() {
     }
   };
 
-  const filtered = expenses.filter((exp) => {
-    const matchesSearch =
-      !search ||
-      exp.description?.toLowerCase().includes(search.toLowerCase()) ||
-      exp.category?.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "all" || exp.type === typeFilter;
-    const matchesStatus = statusFilter === "all" || exp.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
-  });
-
   const totalApproved = expenses.filter((e) => e.status === "approved").reduce((s, e) => s + e.amount, 0);
   const totalPending = expenses.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
   const thisMonth = expenses.filter((e) => {
@@ -179,6 +183,16 @@ export default function ExpensesPage() {
           <h1 className="text-2xl font-bold">Expenses</h1>
           <p className="text-muted-foreground mt-1">Track and manage business expenses</p>
         </div>
+        <div className="flex items-center gap-2">
+          <ExportButton data={expenses} columns={[
+            { key: "description", label: "Description" },
+            { key: "category", label: "Category" },
+            { key: "type", label: "Type" },
+            { key: "amount", label: "Amount" },
+            { key: "currency", label: "Currency" },
+            { key: "date", label: "Date" },
+            { key: "status", label: "Status" },
+          ]} filename="expenses" />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Expense</Button>} />
           <DialogContent className="max-w-lg">
@@ -262,6 +276,7 @@ export default function ExpensesPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -331,7 +346,7 @@ export default function ExpensesPage() {
       {/* Expense List */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : filtered.length === 0 ? (
+      ) : expenses.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Receipt className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -339,8 +354,9 @@ export default function ExpensesPage() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="space-y-3">
-          {filtered.map((exp) => (
+          {expenses.map((exp) => (
             <Card key={exp._id} className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
@@ -383,6 +399,8 @@ export default function ExpensesPage() {
             </Card>
           ))}
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

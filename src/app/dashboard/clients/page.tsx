@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Search, Contact } from "lucide-react";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface ClientData {
   _id: string;
@@ -38,6 +40,9 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ClientData | null>(null);
   const [form, setForm] = useState({
@@ -49,11 +54,21 @@ export default function ClientsPage() {
   });
 
   const fetchClients = useCallback(async () => {
-    const params = search ? `?search=${encodeURIComponent(search)}` : "";
-    const res = await fetch(`/api/clients${params}`);
-    if (res.ok) setClients(await res.json());
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
+    if (search) params.set("search", search);
+    const res = await fetch(`/api/clients?${params}`);
+    if (res.ok) {
+      const json = await res.json();
+      setClients(json.data ?? []);
+      setTotalPages(json.totalPages ?? 1);
+      setTotal(json.total ?? 0);
+    }
     setLoading(false);
-  }, [search]);
+  }, [page, search]);
+
+  useEffect(() => { setPage(1); }, [search]);
 
   useEffect(() => {
     const timer = setTimeout(fetchClients, 300);
@@ -105,10 +120,18 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-2xl font-bold">Clients</h1>
           <p className="text-muted-foreground mt-1">
-            {clients.length} client{clients.length !== 1 ? "s" : ""}
+            {total} client{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center gap-2">
+          <ExportButton data={clients} columns={[
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "company", label: "Company" },
+            { key: "address", label: "Address" },
+          ]} filename="clients" />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={
               <Button onClick={openCreate}>
@@ -165,6 +188,7 @@ export default function ClientsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
@@ -189,6 +213,7 @@ export default function ClientsPage() {
           ) : clients.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No clients yet</p>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -221,6 +246,8 @@ export default function ClientsPage() {
                 ))}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+            </>
           )}
         </CardContent>
       </Card>

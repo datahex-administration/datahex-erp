@@ -30,8 +30,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Mail, MessageCircle, Pencil, Plus, RotateCcw, Shield } from "lucide-react";
+import { Mail, MessageCircle, Pencil, Plus, RotateCcw, Shield, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface UserData {
   _id: string;
@@ -71,6 +73,10 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState<UserData | null>(null);
   const [communicationStatus, setCommunicationStatus] = useState<CommunicationStatus | null>(null);
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -81,10 +87,19 @@ export default function SettingsPage() {
   });
 
   const fetchUsers = useCallback(async () => {
-    const res = await fetch("/api/users");
-    if (res.ok) setUsers(await res.json());
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", String(page));
+    params.set("limit", "10");
+    const res = await fetch(`/api/users?${params}`);
+    if (res.ok) {
+      const json = await res.json();
+      setUsers(json.data || []);
+      setTotalPages(json.totalPages || 1);
+      setTotal(json.total || 0);
+    }
     setLoading(false);
-  }, []);
+  }, [search, page]);
 
   const fetchCommunicationStatus = useCallback(async () => {
     const res = await fetch("/api/communications/status");
@@ -92,8 +107,11 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
     fetchCommunicationStatus();
+    return () => clearTimeout(timer);
   }, [fetchUsers, fetchCommunicationStatus]);
 
   const openCreate = () => {
@@ -179,8 +197,10 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">User management & permissions</p>
+          <p className="text-muted-foreground mt-1">{total} user{total !== 1 ? "s" : ""}</p>
         </div>
+        <div className="flex items-center gap-2">
+          <ExportButton data={users} columns={[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "role", label: "Role" }, { key: "isActive", label: "Active" }]} filename="users" />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add User</Button>}
@@ -251,6 +271,13 @@ export default function SettingsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search users..." className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -304,7 +331,10 @@ export default function SettingsPage() {
         <CardContent>
           {loading ? (
             <p className="text-muted-foreground py-8 text-center">Loading...</p>
+          ) : users.length === 0 ? (
+            <p className="text-muted-foreground py-8 text-center">No users found</p>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -352,6 +382,8 @@ export default function SettingsPage() {
                 ))}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+          </>
           )}
         </CardContent>
       </Card>

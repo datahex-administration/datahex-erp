@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -72,6 +74,17 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-800",
 };
 
+const EXPORT_COLUMNS = [
+  { key: "name", label: "Name" },
+  { key: "provider", label: "Provider" },
+  { key: "type", label: "Type" },
+  { key: "cost", label: "Cost" },
+  { key: "currency", label: "Currency" },
+  { key: "frequency", label: "Frequency" },
+  { key: "status", label: "Status" },
+  { key: "renewalDate", label: "Renewal Date" },
+];
+
 export default function SubscriptionsPage() {
   const [subs, setSubs] = useState<AnyObj[]>([]);
   const [projects, setProjects] = useState<AnyObj[]>([]);
@@ -81,6 +94,9 @@ export default function SubscriptionsPage() {
   const [showCreds, setShowCreds] = useState<Record<string, boolean>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const [form, setForm] = useState({
     name: "",
@@ -98,15 +114,27 @@ export default function SubscriptionsPage() {
   });
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/subscriptions").then((r) => r.json()),
-      fetch("/api/projects").then((r) => r.json()),
-    ]).then(([s, p]) => {
-      setSubs(Array.isArray(s) ? s : []);
-      setProjects(Array.isArray(p) ? p : []);
-      setLoading(false);
-    });
+    fetch("/api/projects?limit=100").then((r) => r.json()).then((json) => setProjects(json.data || []));
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (typeFilter !== "all") params.set("type", typeFilter);
+      params.set("page", String(page));
+      params.set("limit", "10");
+      fetch(`/api/subscriptions?${params}`)
+        .then((r) => r.json())
+        .then((json) => {
+          setSubs(json.data || []);
+          setTotalPages(json.totalPages || 1);
+          setTotal(json.total || 0);
+        })
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, typeFilter, page]);
 
   const resetForm = () => setForm({
     name: "", provider: "", type: "server", cost: "", currency: "USD",
@@ -163,15 +191,6 @@ export default function SubscriptionsPage() {
     }
   };
 
-  const filtered = subs.filter((s) => {
-    const matchesSearch =
-      !search ||
-      s.name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.provider?.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "all" || s.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
-
   const totalMonthlyCost = subs
     .filter((s) => s.status === "active")
     .reduce((sum, s) => sum + (s.frequency === "yearly" ? s.cost / 12 : s.cost), 0);
@@ -189,8 +208,10 @@ export default function SubscriptionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Subscriptions</h1>
-          <p className="text-muted-foreground mt-1">Track recurring services, domains, and hosting costs</p>
+          <p className="text-muted-foreground mt-1">{total} subscription{total !== 1 ? "s" : ""} total</p>
         </div>
+        <div className="flex items-center gap-2">
+          <ExportButton data={subs} columns={EXPORT_COLUMNS} filename="subscriptions" />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Subscription</Button>} />
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -274,6 +295,7 @@ export default function SubscriptionsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -317,7 +339,7 @@ export default function SubscriptionsPage() {
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search subscriptions..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search subscriptions..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9" />
         </div>
         <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
           <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
@@ -333,7 +355,7 @@ export default function SubscriptionsPage() {
       {/* Subscription List */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : filtered.length === 0 ? (
+      ) : subs.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <CreditCard className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -341,8 +363,9 @@ export default function SubscriptionsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((sub) => {
+        <>
+          <div className="space-y-3">
+          {subs.map((sub) => {
             const daysToRenewal = differenceInDays(new Date(sub.renewalDate), new Date());
             const isUrgent = sub.status === "active" && daysToRenewal >= 0 && daysToRenewal <= 7;
             const isUpcoming = sub.status === "active" && daysToRenewal > 7 && daysToRenewal <= 30;
@@ -413,6 +436,8 @@ export default function SubscriptionsPage() {
             );
           })}
         </div>
+        <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

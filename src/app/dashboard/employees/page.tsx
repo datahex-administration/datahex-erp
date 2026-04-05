@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, Users, Eye } from "lucide-react";
 import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface EmployeeData {
   _id: string;
@@ -60,17 +62,29 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchEmployees = useCallback(async () => {
     const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (typeFilter !== "all") params.set("type", typeFilter);
 
     const res = await fetch(`/api/employees?${params}`);
-    if (res.ok) setEmployees(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setEmployees(json.data ?? []);
+      setTotalPages(json.totalPages ?? 1);
+      setTotal(json.total ?? 0);
+    }
     setLoading(false);
-  }, [search, statusFilter, typeFilter]);
+  }, [page, search, statusFilter, typeFilter]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, typeFilter]);
 
   useEffect(() => {
     const timer = setTimeout(fetchEmployees, 300);
@@ -83,14 +97,27 @@ export default function EmployeesPage() {
         <div>
           <h1 className="text-2xl font-bold">Employees</h1>
           <p className="text-muted-foreground mt-1">
-            {employees.length} employee{employees.length !== 1 ? "s" : ""} found
+            {total} employee{total !== 1 ? "s" : ""} found
           </p>
         </div>
-        <Link href="/dashboard/employees/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Add Employee
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton data={employees} columns={[
+            { key: "employeeId", label: "ID" },
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "designation", label: "Designation" },
+            { key: "type", label: "Type" },
+            { key: "joiningDate", label: "Joined" },
+            { key: "salary", label: "Salary" },
+            { key: "currency", label: "Currency" },
+            { key: "status", label: "Status" },
+          ]} filename="employees" />
+          <Link href="/dashboard/employees/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Employee
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -140,6 +167,7 @@ export default function EmployeesPage() {
           ) : employees.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No employees found</p>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -195,6 +223,8 @@ export default function EmployeesPage() {
                 </TableBody>
               </Table>
             </div>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+            </>
           )}
         </CardContent>
       </Card>

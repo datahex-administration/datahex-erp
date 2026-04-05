@@ -1,14 +1,22 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
 const COOKIE_NAME = "datahex-session";
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-const useSecureCookies =
-  process.env.NODE_ENV === "production" &&
-  !appUrl.startsWith("http://localhost") &&
-  !appUrl.startsWith("http://127.0.0.1");
+
+async function shouldUseSecureCookies() {
+  const requestHeaders = await headers();
+  const forwardedProto = requestHeaders.get("x-forwarded-proto");
+  const host = requestHeaders.get("host") || "";
+  const isLocalHost = host.startsWith("localhost") || host.startsWith("127.0.0.1");
+
+  return (
+    process.env.NODE_ENV === "production" &&
+    forwardedProto === "https" &&
+    !isLocalHost
+  );
+}
 
 export interface SessionPayload {
   userId: string;
@@ -38,6 +46,7 @@ export async function createSession(payload: SessionPayload): Promise<string> {
     .setIssuedAt()
     .setExpirationTime("7d")
     .sign(JWT_SECRET);
+  const useSecureCookies = await shouldUseSecureCookies();
 
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, token, {

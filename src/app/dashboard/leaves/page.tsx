@@ -30,9 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarDays, Plus, Check, X, Loader2, Heart, Coffee, Award } from "lucide-react";
+import { CalendarDays, Plus, Check, X, Loader2, Heart, Coffee, Award, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface LeaveData {
   _id: string;
@@ -72,6 +74,10 @@ export default function LeavesPage() {
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [form, setForm] = useState({
     employeeId: "",
     type: "casual",
@@ -84,11 +90,18 @@ export default function LeavesPage() {
     const params = new URLSearchParams();
     if (filter !== "all") params.set("status", filter);
     if (selectedEmployee !== "all") params.set("employeeId", selectedEmployee);
-    const qs = params.toString();
-    const res = await fetch(`/api/leaves${qs ? `?${qs}` : ""}`);
-    if (res.ok) setLeaves(await res.json());
+    if (search) params.set("search", search);
+    params.set("page", String(page));
+    params.set("limit", "10");
+    const res = await fetch(`/api/leaves?${params}`);
+    if (res.ok) {
+      const json = await res.json();
+      setLeaves(json.data || []);
+      setTotalPages(json.totalPages || 1);
+      setTotal(json.total || 0);
+    }
     setLoading(false);
-  }, [filter, selectedEmployee]);
+  }, [filter, selectedEmployee, search, page]);
 
   const fetchBalances = useCallback(async () => {
     const year = new Date().getFullYear();
@@ -97,11 +110,14 @@ export default function LeavesPage() {
   }, []);
 
   useEffect(() => {
-    fetchLeaves();
+    const timer = setTimeout(() => {
+      fetchLeaves();
+    }, 300);
     fetchBalances();
-    fetch("/api/employees?status=active")
+    fetch("/api/employees?status=active&limit=100")
       .then((r) => r.json())
-      .then((data) => setEmployees(Array.isArray(data) ? data : []));
+      .then((json) => setEmployees(json.data || []));
+    return () => clearTimeout(timer);
   }, [fetchLeaves, fetchBalances]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -337,18 +353,22 @@ export default function LeavesPage() {
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search leaves..." className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        </div>
         {["all", "pending", "approved", "rejected"].map((s) => (
           <Button
             key={s}
             variant={filter === s ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter(s)}
+            onClick={() => { setFilter(s); setPage(1); }}
             className="capitalize"
           >
             {s}
           </Button>
         ))}
-        <Select value={selectedEmployee} onValueChange={(v) => v && setSelectedEmployee(v)}>
+        <Select value={selectedEmployee} onValueChange={(v) => { if (v) { setSelectedEmployee(v); setPage(1); } }}>
           <SelectTrigger className="w-[200px] ml-auto"><SelectValue placeholder="All employees" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Employees</SelectItem>
@@ -357,6 +377,7 @@ export default function LeavesPage() {
             ))}
           </SelectContent>
         </Select>
+        <ExportButton data={leaves} columns={[{ key: "employeeId.name", label: "Employee" }, { key: "type", label: "Type" }, { key: "startDate", label: "Start" }, { key: "endDate", label: "End" }, { key: "days", label: "Days" }, { key: "reason", label: "Reason" }, { key: "status", label: "Status" }]} filename="leaves" />
       </div>
 
       {/* Leave Applications Table */}
@@ -372,6 +393,7 @@ export default function LeavesPage() {
           ) : leaves.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No leave applications</p>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -420,6 +442,8 @@ export default function LeavesPage() {
                 ))}
               </TableBody>
             </Table>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+          </>
           )}
         </CardContent>
       </Card>

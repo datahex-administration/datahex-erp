@@ -4,8 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Bell, Check, Search } from "lucide-react";
 import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface NotificationData {
   _id: string;
@@ -19,15 +22,29 @@ interface NotificationData {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
-    const res = await fetch("/api/notifications");
-    if (res.ok) setNotifications(await res.json());
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", String(page));
+    params.set("limit", "10");
+    const res = await fetch(`/api/notifications?${params}`);
+    if (res.ok) {
+      const json = await res.json();
+      setNotifications(json.data || []);
+      setTotalPages(json.totalPages || 1);
+      setTotal(json.total || 0);
+    }
     setLoading(false);
-  }, []);
+  }, [search, page]);
 
   useEffect(() => {
-    fetchNotifications();
+    const timer = setTimeout(fetchNotifications, 300);
+    return () => clearTimeout(timer);
   }, [fetchNotifications]);
 
   const markRead = async (id: string) => {
@@ -43,7 +60,16 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Notifications</h1>
-        <p className="text-muted-foreground mt-1">Stay updated with your alerts</p>
+        <p className="text-muted-foreground mt-1">{total} notification{total !== 1 ? "s" : ""}</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <ExportButton data={notifications} columns={[{ key: "title", label: "Title" }, { key: "message", label: "Message" }, { key: "type", label: "Type" }, { key: "read", label: "Read" }, { key: "createdAt", label: "Date" }]} filename="notifications" />
+      </div>
+
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input placeholder="Search notifications..." className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
       </div>
 
       <Card>
@@ -58,6 +84,7 @@ export default function NotificationsPage() {
           ) : notifications.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No notifications yet</p>
           ) : (
+            <>
             <div className="space-y-3">
               {notifications.map((n) => (
                 <div
@@ -82,6 +109,8 @@ export default function NotificationsPage() {
                 </div>
               ))}
             </div>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+            </>
           )}
         </CardContent>
       </Card>

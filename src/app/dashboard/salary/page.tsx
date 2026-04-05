@@ -28,9 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, Play, Loader2 } from "lucide-react";
+import { Wallet, Play, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface SalaryProcessingData {
   _id: string;
@@ -64,12 +66,23 @@ export default function SalaryPage() {
   const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth() + 1));
   const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchProcessings = useCallback(async () => {
-    const res = await fetch("/api/salary/process");
-    if (res.ok) setProcessings(await res.json());
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
+    const res = await fetch(`/api/salary/process?${params}`);
+    if (res.ok) {
+      const json = await res.json();
+      setProcessings(json.data || []);
+      setTotalPages(json.totalPages || 1);
+      setTotal(json.total || 0);
+    }
     setLoading(false);
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     fetchProcessings();
@@ -99,8 +112,10 @@ export default function SalaryPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Salary Management</h1>
-          <p className="text-muted-foreground mt-1">Process and track salary payments</p>
+          <p className="text-muted-foreground mt-1">{total} record{total !== 1 ? "s" : ""}</p>
         </div>
+        <div className="flex items-center gap-2">
+        <ExportButton data={processings.flatMap(p => p.employees.map(emp => ({ month: `${MONTHS[p.month-1]} ${p.year}`, ...emp, currency: p.currency })))} columns={[{ key: "month", label: "Month" }, { key: "employeeName", label: "Employee" }, { key: "baseSalary", label: "Base" }, { key: "deductions", label: "Deductions" }, { key: "bonus", label: "Bonus" }, { key: "netSalary", label: "Net" }, { key: "currency", label: "Currency" }]} filename="salary" />
         <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
           <DialogTrigger
             render={<Button><Play className="mr-2 h-4 w-4" /> Process Salary</Button>}
@@ -143,6 +158,7 @@ export default function SalaryPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -157,6 +173,7 @@ export default function SalaryPage() {
           ) : processings.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">No salary processed yet</p>
           ) : (
+            <>
             <div className="space-y-4">
               {processings.map((p) => (
                 <div key={p._id} className="border rounded-lg">
@@ -208,6 +225,8 @@ export default function SalaryPage() {
                 </div>
               ))}
             </div>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+          </>
           )}
         </CardContent>
       </Card>

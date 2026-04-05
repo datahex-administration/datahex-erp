@@ -37,6 +37,8 @@ import {
   Activity,
 } from "lucide-react";
 import { format } from "date-fns";
+import { ExportButton } from "@/components/ui/export-button";
+import { Pagination } from "@/components/ui/pagination";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -73,12 +75,12 @@ const MODULES = [
 ];
 
 export default function AuditLogPage() {
-  const [data, setData] = useState<{ logs: AnyObj[]; total: number }>({ logs: [], total: 0 });
+  const [data, setData] = useState<{ data: AnyObj[]; total: number; totalPages: number }>({ data: [], total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [moduleFilter, setModuleFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const limit = 50;
+  const limit = 10;
 
   useEffect(() => {
     setLoading(true);
@@ -89,12 +91,10 @@ export default function AuditLogPage() {
     fetch(`/api/audit-logs?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setData(d.logs ? d : { logs: [], total: 0 });
+        setData(d.data ? d : { data: [], total: 0, totalPages: 1 });
         setLoading(false);
       });
   }, [page, moduleFilter, search]);
-
-  const totalPages = Math.ceil(data.total / limit) || 1;
 
   const getActionIcon = (action: string) => {
     const key = Object.keys(ACTION_ICONS).find((k) => action.toLowerCase().includes(k));
@@ -107,8 +107,10 @@ export default function AuditLogPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="h-6 w-6" /> Audit Log
         </h1>
-        <p className="text-muted-foreground mt-1">Track all system actions and changes</p>
+        <p className="text-muted-foreground mt-1">{data.total} action{data.total !== 1 ? "s" : ""} logged</p>
       </div>
+
+      <ExportButton data={data.data} columns={[{ key: "module", label: "Module" }, { key: "action", label: "Action" }, { key: "details", label: "Details" }, { key: "userId.name", label: "User" }, { key: "createdAt", label: "Date" }]} filename="audit-log" />
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
@@ -144,7 +146,7 @@ export default function AuditLogPage() {
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : data.logs.length === 0 ? (
+          ) : data.data.length === 0 ? (
             <div className="text-center py-12">
               <Activity className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-muted-foreground">No audit logs found</p>
@@ -162,7 +164,7 @@ export default function AuditLogPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.logs.map((log) => (
+                  {data.data.map((log) => (
                     <TableRow key={log._id}>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {format(new Date(log.createdAt), "MMM d, yyyy HH:mm:ss")}
@@ -194,22 +196,7 @@ export default function AuditLogPage() {
             </ScrollArea>
           )}
 
-          {/* Pagination */}
-          {data.total > limit && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                Page {page} of {totalPages}
-              </p>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination page={page} totalPages={data.totalPages} total={data.total} onPageChange={setPage} />
         </CardContent>
       </Card>
     </div>

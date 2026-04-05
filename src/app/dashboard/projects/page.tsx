@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Eye, Calendar, DollarSign } from "lucide-react";
 import { format } from "date-fns";
+import { Pagination } from "@/components/ui/pagination";
+import { ExportButton } from "@/components/ui/export-button";
 
 interface ProjectData {
   _id: string;
@@ -49,15 +51,31 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"list" | "kanban">("list");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const fetchProjects = useCallback(async () => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
+    if (view === "kanban") {
+      params.set("limit", "100");
+    } else {
+      params.set("page", String(page));
+      params.set("limit", "10");
+    }
     const res = await fetch(`/api/projects?${params}`);
-    if (res.ok) setProjects(await res.json());
+    if (res.ok) {
+      const json = await res.json();
+      setProjects(json.data ?? []);
+      setTotalPages(json.totalPages ?? 1);
+      setTotal(json.total ?? 0);
+    }
     setLoading(false);
-  }, [search, statusFilter]);
+  }, [page, search, statusFilter, view]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter]);
 
   useEffect(() => {
     const timer = setTimeout(fetchProjects, 300);
@@ -79,12 +97,24 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="text-muted-foreground mt-1">
-            {projects.length} project{projects.length !== 1 ? "s" : ""}
+            {total} project{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link href="/dashboard/projects/new">
-          <Button><Plus className="mr-2 h-4 w-4" /> New Project</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton data={projects} columns={[
+            { key: "name", label: "Name" },
+            { key: "status", label: "Status" },
+            { key: "clientId.name", label: "Client" },
+            { key: "managerId.name", label: "Manager" },
+            { key: "startDate", label: "Start Date" },
+            { key: "deadline", label: "Deadline" },
+            { key: "budget", label: "Budget" },
+            { key: "currency", label: "Currency" },
+          ]} filename="projects" />
+          <Link href="/dashboard/projects/new">
+            <Button><Plus className="mr-2 h-4 w-4" /> New Project</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -115,6 +145,7 @@ export default function ProjectsPage() {
           ) : projects.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No projects yet. Create your first project.</CardContent></Card>
           ) : (
+            <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {projects.map((project) => (
                 <Link key={project._id} href={`/dashboard/projects/${project._id}`}>
@@ -146,6 +177,8 @@ export default function ProjectsPage() {
                 </Link>
               ))}
             </div>
+            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+            </>
           )}
         </TabsContent>
 

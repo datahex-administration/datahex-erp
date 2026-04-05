@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,102 +23,211 @@ type AnyObj = Record<string, any>;
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
-  sent: "bg-blue-100 t"use client";
+  sent: "bg-blue-100 text-blue-800",
+  paid: "bg-green-100 text-green-800",
+  overdue: "bg-red-100 text-red-800",
+  cancelled: "bg-orange-100 text-orange-800",
+};
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-importnc
-import { usrayimport Link from "next/link";
-import { CardNSimport { Card, CardContent }",import { Button } from "@/components/ui/button";
-import "Cimport { Badge } from "@/components/ui/badge";
-ojimport { Input } from "@/components/ui/input" kimport {
-  Select, SelectContent, SelectItem, "  Selecab} from "@/components/ui/select";
-import {
-  Plus, FileText, Seaenimport {
-  Plus, FileText, Searey  Plus,us  DollarSign, TrendingUp, Clock, AlertTriangle,
-} frIs} from "lucide-react";
-import { format } from atimport { format } froulimport { toast } from "sonner";
-istimport { Pagination } from "@/Stimport { ExportButton } from "@/components/ui/export-buta
-// eslint-disable-next-line @typescript-eslint/no-explicit-t [type AnyObj = Record<string, any>;
+export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<AnyObj[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-const STATUS_COLORS: Recoge
-const STATUS_COLORS: Record<stri [totalPages, setTotalPages] = useState(1);
-  const  sent: "bg-blue-100 t"use client";
- u
-import { useState, useEffect } fr seimport Link from "next/link";
-importnc
-impoRLimportnc
-import { usrayimporarimport amimport { CardNSimport { Card, CardContent ilimport "Cimport { Badge } from "@/components/ui/badge";
-ojimport { Input } from "@/component  ojimport { Input } from "@/components/ui/input" kimpores  Select, SelectContent, SelectItem, "  Selecab} from "@n(import {
-  Plus, FileText, Seaenimport {
-  Plus, FileText, Searey  Plus,us  Doon  Plus,ag  Plus, FileText, Searey  Plusso} frIs} from "lucide-react";
-import { format } from atimport { format } froulim);import { form) => clearTimeouistimport { Pagination } from "@/Stimport { ExportButton } from "@/components/d:// eslint-disable-next-line @typescript-eslint/no-explicit-t [type AnyObj = Record<string, th
-const STATUS_COLORS: Recoge
-const STATUS_COLORS: Record<stri [totalPages, setTotalPages] = usestaconst STATUS_COLORS: Recors.  const  sent: "bg-blue-100 t"use client";
- u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportnc
-impoRLimportnc
-import { usrayimporarimport amimport { C  impoRLi/ import { usra fojimport { Input } from "@/component  ojimport { Input } from "@/components/ui/input" kimpores  Select, SelectContent, SelectIteta  Plus, FileText, Seaenimport {
-  Plus, FileText, Searey  Plus,us  Doon  Plus,ag  Plus, FileText, Searey  Plusso} frIs} from "lucide-react";
-import { format } vo  Plus, FileText, Searey  Plus= import { format } from atimport { format } froulim);import { form) => clearTimeouistimport { Pagination } fesconst STATUS_COLORS: Recoge
-const STATUS_COLORS: Record<stri [totalPages, setTotalPages] = usestaconst STATUS_COLORS: Recors.  const  sent: "bg-blue-100 t"use client";
- u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportnc
-impoRLimportnc
-import { usrayimporarimport amimporicis}import { useState, useEffect } amimpoRLimportnc
-import { usrayimporarimport amimpornvimport { usra    Plus, FileText, Searey  Plus,us  Doon  Plus,ag  Plus, FileText, Searey  Plusso} frIs} from "lucide-react";
-import { format } vo  Plus, FileText, Searey  Plus= import { format } from atimport { format } froulim);import { form"fimport { format } vo  Plus, FileText, Searey  Plus= import { format } from atimport { format } froulim);igreeconst STATUS_COLORS: Record<stri [totalPages, setTotalPages] = usestaconst STATUS_COLORS: Recors.  const  sent: "bg-blue-100 t"use client";
- u
-import { useState, useEffectpr u
-import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useState, useEffect } diimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimpofoimport { useState, useEffect } StimpoRLimportnc
-import { usrayimporarimport amimpor  import { usraonimport { usrayimporarimport amimpornvimport { usra    Plus, FileText, Searey  Plus,us deimport { format } vo  Plus, FileText, Searey  Plus= import { format } from atimport { format } froulim);import { form"fimport { format } vo  Plus, FileText, Set- u
-import { useState, useEffectpr u
-import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useState, useEffect } diimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimpofoimport { useState, useEffect } StimpoRLimportnc
-import { useni><import { us < u
-import { useSta cimport { useSt gimport { useState, useEffect } reimport { useState, umei"himport { useState, useEffect } diimport { useState, useraimport { useState, useEffect } fr seim :iinimpofoimport { useState, useEffect } StimpoRLiceimport { usrayimporarimport amimpor  import { usraonimport { usrayimporarimport amimpornvimport-9import { useState, useEffectpr u
-import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useState, useEffect } diimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimpo  import { us < u
-import { useStat<import { useSt  import { useState, useEffect } t"import { useState, umei"himport { useState, useEffect } diimport { useState, use  import { useState, useEffect } fr seim :iinimpofoimport { useState, useEffect } StimpoRLillimport { useni><import { us < u
-import { useSta cimport { useSt gimport { useState, useEffect }adimport { useSta cimport { useS="import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useState, useEffect } diimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimpo  import { us < u
-import { useStat<import { useSt  import { useState, useEffect } t"import { useSth import { useStr import { useState, useEffect } esimport { useState, umei"himport { useState, useEffect } diimport { useState, usetoimport { useState, useEffect } fr seim :iinimpo  import { us < u
-import { useStat<import dCimport { useStat<import { useSt  import { useState, useEffect }laimport { useSta cimport { useSt gimport { useState, useEffect }adimport { useSta cimport { useS="import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useStat  import { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recorn  import { useState, useEffect } f=import { useState, umei"himport { useState, useEffect } diimport { useState, usev.import { useState, useEffect } fr seim :iinimpo  import { us < u
-import { useStat<import usimport { useStat<import { useSt  import { useState, useEffect }  import { useStat<import dCimport { useStat<import { useSt  import { useState, useEffect }laimport { useSta cimport { useSt gimport { useState, useEffect }adimport { useSta cimport { useS="import { us < u
-import { useState, useEffectpr u
-import { useState, useEffect } fr seim inimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useStat  import { useState, useEffectpr u
-import { us")import { useState, useEffect }   import { useState, umei"himport { useStat  import { useState, useEffectpr u
-impo  import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Remeimport { useStat<import usimport { useStat<import { useSt  import { useState, useEffect }  import { useStat<import dCimport { useStat<import { useSt  import { useState, useEffect }laimport { useSta cimport { useSt gimport { useState, useEffect }adimport { usxtimport { useState, useEffectpr u
-import { useState, useEffect } fr seim inimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useStat  import { useState, useEffectpr u
-import { us")import { useStas(import { useState, useEffect } meimport { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS:   import { useState, umei"himport { useStat  import { useState, useEffectpr u
-impoouimport { us")import { useState, useEffect }   import { useState, umei"himpv.impo  import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Remeimport { useStat<import usimport { useivimport { useState, useEffect } fr seim inimport { useState, useEffectpr u
-import { useState, useEffect } fr seim :iinimportd-const STATUS_COLORS: Recornv u
-import { useState, umei"himport { useStat  import { useSonPageChange={setPage} />
+  const fetchInvoices = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "10");
+    if (search) params.set("search", search);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    try {
+      const res = await fetch(`/api/invoices?${params}`);
+      if (res.ok) {
+        const json = await res.json();
+        setInvoices(json.data ?? []);
+        setTotalPages(json.totalPages ?? 1);
+        setTotal(json.total ?? 0);
+      }
+    } catch {
+      toast.error("Failed to load invoices");
+    }
+    setLoading(false);
+  }, [page, search, statusFilter]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter]);
+
+  const updateStatus = async (id: string, status: string) => {
+    const res = await fetch(`/api/invoices/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      toast.success(`Invoice marked as ${status}`);
+      fetchInvoices();
+    } else {
+      toast.error("Failed to update status");
+    }
+  };
+
+  const summary = {
+    collected: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.total || 0), 0),
+    pending: invoices.filter((i) => i.status === "sent").reduce((s, i) => s + (i.total || 0), 0),
+    overdue: invoices.filter((i) => i.status === "overdue").reduce((s, i) => s + (i.total || 0), 0),
+    drafts: invoices.filter((i) => i.status === "draft").length,
+  };
+
+  const fmtCurrency = (v: number, c = "INR") =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: c }).format(v);
+
+  const exportColumns = [
+    { key: "invoiceNumber", label: "Invoice #" },
+    { key: "clientId.name", label: "Client" },
+    { key: "type", label: "Type" },
+    { key: "status", label: "Status" },
+    { key: "issueDate", label: "Issue Date" },
+    { key: "dueDate", label: "Due Date" },
+    { key: "subtotal", label: "Subtotal" },
+    { key: "tax", label: "Tax" },
+    { key: "total", label: "Total" },
+    { key: "currency", label: "Currency" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="h-6 w-6" /> Invoices
+          </h1>
+          <p className="text-muted-foreground text-sm">{total} total invoices</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <ExportButton data={invoices} columns={exportColumns} filename="invoices" />
+          <Link href="/dashboard/invoices/new">
+            <Button><Plus className="h-4 w-4 mr-1" /> New Invoice</Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-100"><DollarSign className="h-5 w-5 text-green-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Collected</p>
+              <p className="text-lg font-bold">{fmtCurrency(summary.collected)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-100"><TrendingUp className="h-5 w-5 text-blue-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Pending</p>
+              <p className="text-lg font-bold">{fmtCurrency(summary.pending)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-red-100"><AlertTriangle className="h-5 w-5 text-red-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Overdue</p>
+              <p className="text-lg font-bold">{fmtCurrency(summary.overdue)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gray-100"><Clock className="h-5 w-5 text-gray-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Drafts</p>
+              <p className="text-lg font-bold">{summary.drafts}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by invoice number..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+      ) : invoices.length === 0 ? (
+        <Card><CardContent className="p-12 text-center text-muted-foreground">No invoices found.</CardContent></Card>
+      ) : (
+        <>
+          <div className="space-y-3">
+            {invoices.map((inv) => (
+              <Card key={inv._id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link href={`/dashboard/invoices/${inv._id}`} className="font-semibold hover:underline">
+                          {inv.invoiceNumber}
+                        </Link>
+                        <Badge className={STATUS_COLORS[inv.status] || ""}>{inv.status}</Badge>
+                        <Badge variant="outline" className="text-xs">{inv.type}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {inv.clientId?.name || "Unknown Client"}
+                        {inv.projectId?.name && ` · ${inv.projectId.name}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Issued {inv.issueDate ? format(new Date(inv.issueDate), "MMM d, yyyy") : "—"}
+                        {" · "}Due {inv.dueDate ? format(new Date(inv.dueDate), "MMM d, yyyy") : "—"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{fmtCurrency(inv.total || 0, inv.currency)}</p>
+                        {inv.tax > 0 && (
+                          <p className="text-xs text-muted-foreground">Tax: {fmtCurrency(inv.tax, inv.currency)}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        {inv.status === "draft" && (
+                          <Button size="sm" variant="outline" onClick={() => updateStatus(inv._id, "sent")}>
+                            <Send className="h-3 w-3 mr-1" /> Send
+                          </Button>
+                        )}
+                        {inv.status === "sent" && (
+                          <Button size="sm" variant="outline" className="text-green-600" onClick={() => updateStatus(inv._id, "paid")}>
+                            <CheckCircle className="h-3 w-3 mr-1" /> Paid
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
         </>
       )}
     </div>
