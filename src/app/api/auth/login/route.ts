@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true });
+    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true }).lean();
     if (!user) {
       return NextResponse.json(
         { error: "Invalid credentials" },
@@ -41,10 +41,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-
     // Create session
     await createSession({
       userId: user._id.toString(),
@@ -53,7 +49,15 @@ export async function POST(request: NextRequest) {
       permissions: user.permissions,
     });
 
-    await logAudit({
+    // Login should succeed even if best-effort metadata writes are slow on Workers.
+    void User.updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    ).catch((error) => {
+      console.error("Failed to update last login:", error);
+    });
+
+    void logAudit({
       companyId: user.companyId.toString(),
       userId: user._id.toString(),
       action: "login",
