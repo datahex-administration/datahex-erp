@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { Sidebar } from "@/components/layout/sidebar";
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -86,10 +87,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+        <div className="mx-auto max-w-7xl px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">
           {children}
         </div>
       </main>
+
+      <MobileBottomNav />
     </div>
   );
 }

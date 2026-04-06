@@ -2,6 +2,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  Clock,
   Contact,
   CreditCard,
   FileText,
@@ -93,6 +94,14 @@ export const navigationGroups: NavigationGroup[] = [
         permission: "leaves:read",
         description: "Time off requests and balances",
         keywords: ["vacation", "attendance"],
+      },
+      {
+        name: "Attendance",
+        href: "/dashboard/attendance",
+        icon: Clock,
+        permission: "attendance:read",
+        description: "Clock in/out and work mode",
+        keywords: ["clock", "check-in", "wfh", "office", "presence"],
       },
       {
         name: "Daily Tasks",

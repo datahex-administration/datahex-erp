@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/providers/auth-provider";
+import { AttendanceWidget } from "@/components/dashboard/attendance-widget";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Attendance Widget */}
+      <AttendanceWidget compact />
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

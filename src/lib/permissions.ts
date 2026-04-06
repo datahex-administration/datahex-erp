@@ -11,6 +11,7 @@ export const MODULES = {
   SUBSCRIPTIONS: "subscriptions",
   MESSAGES: "messages",
   REPORTS: "reports",
+  ATTENDANCE: "attendance",
   SETTINGS: "settings",
 } as const;
 
@@ -62,6 +63,8 @@ export const ROLE_PERMISSIONS = {
     perm(MODULES.REPORTS, ACTIONS.READ),
     perm(MODULES.REPORTS, ACTIONS.CREATE),
     perm(MODULES.REPORTS, ACTIONS.EXPORT),
+    perm(MODULES.ATTENDANCE, ACTIONS.READ),
+    perm(MODULES.ATTENDANCE, ACTIONS.CREATE),
     perm(MODULES.USERS, ACTIONS.READ),
     perm(MODULES.SETTINGS, ACTIONS.READ),
   ],
@@ -74,6 +77,8 @@ export const ROLE_PERMISSIONS = {
     perm(MODULES.MESSAGES, ACTIONS.CREATE),
     perm(MODULES.REPORTS, ACTIONS.READ),
     perm(MODULES.REPORTS, ACTIONS.CREATE),
+    perm(MODULES.ATTENDANCE, ACTIONS.READ),
+    perm(MODULES.ATTENDANCE, ACTIONS.CREATE),
   ],
 } as const;
 
