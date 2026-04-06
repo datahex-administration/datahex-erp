@@ -1,9 +1,9 @@
 import { randomInt } from "node:crypto";
 import { hashPin } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { isValidEmailAddress, sendEmail } from "@/lib/email";
 import { createUserNotification } from "@/lib/notifications";
-import { sendWhatsAppTextMessage } from "@/lib/whatsapp";
+import { isValidWhatsAppRecipient, sendWhatsAppTextMessage } from "@/lib/whatsapp";
 import User from "@/models/User";
 
 interface PinResetTarget {
@@ -37,6 +37,8 @@ export async function issuePinReset(
   const deliveryChannels: string[] = [];
   const deliveryErrors: string[] = [];
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
+  const normalizedEmail = target.email?.trim() || "";
+  const normalizedWhatsappNumber = target.whatsappNumber?.trim() || "";
   const resetReason = options.reason || "A PIN reset was requested for your account.";
   const whatsappMessage = [
     `Hello ${target.name},`,
@@ -57,33 +59,41 @@ export async function issuePinReset(
 
   await User.findByIdAndUpdate(userId, { pin: nextPinHash });
 
-  if (target.whatsappNumber?.trim()) {
-    try {
-      await sendWhatsAppTextMessage({
-        recipient: target.whatsappNumber,
-        message: whatsappMessage,
-        priority: 1,
-      });
-      deliveryChannels.push("whatsapp");
-    } catch (error) {
-      deliveryErrors.push(
-        error instanceof Error ? error.message : "WhatsApp delivery failed"
-      );
+  if (normalizedWhatsappNumber) {
+    if (!isValidWhatsAppRecipient(normalizedWhatsappNumber)) {
+      deliveryErrors.push("Configured WhatsApp number is invalid.");
+    } else {
+      try {
+        await sendWhatsAppTextMessage({
+          recipient: normalizedWhatsappNumber,
+          message: whatsappMessage,
+          priority: 1,
+        });
+        deliveryChannels.push("whatsapp");
+      } catch (error) {
+        deliveryErrors.push(
+          error instanceof Error ? error.message : "WhatsApp delivery failed"
+        );
+      }
     }
   }
 
-  if (target.email?.trim()) {
-    try {
-      await sendEmail({
-        to: target.email,
-        subject: `${appName} PIN reset`,
-        html: emailHtml,
-      });
-      deliveryChannels.push("email");
-    } catch (error) {
-      deliveryErrors.push(
-        error instanceof Error ? error.message : "Email delivery failed"
-      );
+  if (normalizedEmail) {
+    if (!isValidEmailAddress(normalizedEmail)) {
+      deliveryErrors.push("Configured email address is invalid.");
+    } else {
+      try {
+        await sendEmail({
+          to: normalizedEmail,
+          subject: `${appName} PIN reset`,
+          html: emailHtml,
+        });
+        deliveryChannels.push("email");
+      } catch (error) {
+        deliveryErrors.push(
+          error instanceof Error ? error.message : "Email delivery failed"
+        );
+      }
     }
   }
 

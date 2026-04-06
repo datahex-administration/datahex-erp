@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { verifyPin, createSession } from "@/lib/auth";
 import User from "@/models/User";
@@ -25,7 +25,9 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true }).lean();
+    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true })
+      .lean()
+      .exec();
     if (!user) {
       return NextResponse.json(
         { error: "Invalid credentials" },
@@ -49,20 +51,25 @@ export async function POST(request: NextRequest) {
       permissions: user.permissions,
     });
 
-    // Login should succeed even if best-effort metadata writes are slow on Workers.
-    void User.updateOne(
-      { _id: user._id },
-      { $set: { lastLogin: new Date() } }
-    ).catch((error) => {
-      console.error("Failed to update last login:", error);
-    });
+    after(async () => {
+      const results = await Promise.allSettled([
+        User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } }).exec(),
+        logAudit({
+          companyId: user.companyId.toString(),
+          userId: user._id.toString(),
+          action: "login",
+          module: "auth",
+          details: `${user.name} (${user.email}) logged in`,
+        }),
+      ]);
 
-    void logAudit({
-      companyId: user.companyId.toString(),
-      userId: user._id.toString(),
-      action: "login",
-      module: "auth",
-      details: `${user.name} (${user.email}) logged in`,
+      if (results[0].status === "rejected") {
+        console.error("Failed to update last login:", results[0].reason);
+      }
+
+      if (results[1].status === "rejected") {
+        console.error("Failed to write login audit log:", results[1].reason);
+      }
     });
 
     return NextResponse.json({

@@ -44,6 +44,7 @@ import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { CurrencySelect } from "@/components/forms/currency-select";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -241,7 +242,10 @@ export default function SubscriptionsPage() {
                   <Label>Cost *</Label>
                   <div className="flex gap-2">
                     <Input type="number" min="0" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} className="flex-1" />
-                    <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} className="w-20" maxLength={5} />
+                    <CurrencySelect
+                      value={form.currency}
+                      onValueChange={(value) => setForm({ ...form, currency: value })}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

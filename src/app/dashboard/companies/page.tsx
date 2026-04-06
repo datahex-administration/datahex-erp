@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,10 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Building2, Search } from "lucide-react";
+import { Plus, Pencil, Building2, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { CurrencySelect } from "@/components/forms/currency-select";
 
 interface Company {
   _id: string;
@@ -45,6 +49,7 @@ const EXPORT_COLUMNS = [
 ];
 
 export default function CompaniesPage() {
+  const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -55,23 +60,27 @@ export default function CompaniesPage() {
   const [editing, setEditing] = useState<Company | null>(null);
   const [form, setForm] = useState({ name: "", code: "", address: "", currency: "INR" });
 
+  const fetchCompanies = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", String(page));
+    params.set("limit", "10");
+
+    return fetch(`/api/companies?${params}`)
+      .then((response) => response.json())
+      .then((json) => {
+        setCompanies(json.data || []);
+        setTotalPages(json.totalPages || 1);
+        setTotal(json.total || 0);
+      })
+      .finally(() => setLoading(false));
+  }, [page, search]);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      params.set("page", String(page));
-      params.set("limit", "10");
-      fetch(`/api/companies?${params}`)
-        .then((r) => r.json())
-        .then((json) => {
-          setCompanies(json.data || []);
-          setTotalPages(json.totalPages || 1);
-          setTotal(json.total || 0);
-        })
-        .finally(() => setLoading(false));
-    }, 300);
+    const timer = setTimeout(fetchCompanies, 300);
     return () => clearTimeout(timer);
-  }, [search, page]);
+  }, [fetchCompanies]);
 
   const openCreate = () => {
     setEditing(null);
@@ -94,9 +103,26 @@ export default function CompaniesPage() {
       toast.success(editing ? "Company updated" : "Company created");
       setDialogOpen(false);
       setPage(1);
+      fetchCompanies();
     } else {
       const data = await res.json();
       toast.error(data.error || "Failed");
+    }
+  };
+
+  const handleDelete = async (company: Company) => {
+    if (!confirm(`Deactivate ${company.name}?`)) {
+      return;
+    }
+
+    const response = await fetch(`/api/companies/${company._id}`, { method: "DELETE" });
+
+    if (response.ok) {
+      toast.success("Company deactivated");
+      fetchCompanies();
+    } else {
+      const payload = await response.json().catch(() => ({ error: "Failed to deactivate company" }));
+      toast.error(payload.error || "Failed to deactivate company");
     }
   };
 
@@ -114,6 +140,9 @@ export default function CompaniesPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit Company" : "Add Company"}</DialogTitle>
+                <DialogDescription>
+                  Keep company defaults consistent so downstream forms inherit the right currency.
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
@@ -130,9 +159,16 @@ export default function CompaniesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Default Currency</Label>
-                  <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} placeholder="INR" maxLength={5} />
+                  <CurrencySelect
+                    value={form.currency}
+                    onValueChange={(value) => setForm({ ...form, currency: value })}
+                    triggerClassName="w-full"
+                  />
                 </div>
-                <Button type="submit" className="w-full">{editing ? "Update" : "Create"} Company</Button>
+                <DialogFooter className="px-0 pb-0">
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit">{editing ? "Update" : "Create"} Company</Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -165,7 +201,7 @@ export default function CompaniesPage() {
                     <TableHead>Code</TableHead>
                     <TableHead>Currency</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="w-[120px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -178,9 +214,16 @@ export default function CompaniesPage() {
                         <Badge variant={company.isActive ? "default" : "secondary"}>{company.isActive ? "Active" : "Inactive"}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(company)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(company)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {user?.role === "super_admin" ? (
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(company)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          ) : null}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

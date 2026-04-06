@@ -2,9 +2,13 @@ import { format } from "date-fns";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { isValidEmailAddress, sendEmail } from "@/lib/email";
 import { createUserNotification } from "@/lib/notifications";
-import { sendWhatsAppMessage, sendWhatsAppTextMessage } from "@/lib/whatsapp";
+import {
+  isValidWhatsAppRecipient,
+  sendWhatsAppMessage,
+  sendWhatsAppTextMessage,
+} from "@/lib/whatsapp";
 import Invoice from "@/models/Invoice";
 
 export async function POST(
@@ -65,6 +69,8 @@ export async function POST(
     amount: number;
   }>;
   const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
+  const clientEmail = client?.email?.trim() || "";
+  const clientPhone = client?.phone?.trim() || "";
   const currency = invoice.currency || company?.currency || "INR";
   const totalLabel = `${currency} ${invoice.total?.toLocaleString()}`;
   const dueDateLabel = format(new Date(invoice.dueDate), "dd MMM yyyy");
@@ -124,12 +130,14 @@ export async function POST(
   const deliveryErrors: string[] = [];
 
   if (channels.includes("email")) {
-    if (!client?.email) {
+    if (!clientEmail) {
       deliveryErrors.push("Client email is missing");
+    } else if (!isValidEmailAddress(clientEmail)) {
+      deliveryErrors.push("Client email address is invalid.");
     } else {
       try {
         await sendEmail({
-          to: client.email,
+          to: clientEmail,
           subject: `Invoice ${invoice.invoiceNumber} from ${company?.name || appName}`,
           html: emailHtml,
         });
@@ -141,14 +149,16 @@ export async function POST(
   }
 
   if (channels.includes("whatsapp")) {
-    if (!client?.phone) {
+    if (!clientPhone) {
       deliveryErrors.push("Client WhatsApp number is missing");
+    } else if (!isValidWhatsAppRecipient(clientPhone)) {
+      deliveryErrors.push("Client WhatsApp number is invalid.");
     } else {
       try {
         if (invoice.pdfUrl) {
           await sendWhatsAppMessage({
             type: "document",
-            recipient: client.phone,
+            recipient: clientPhone,
             message: whatsappText,
             documentUrl: invoice.pdfUrl,
             documentName: `${invoice.invoiceNumber}.pdf`,
@@ -157,7 +167,7 @@ export async function POST(
           });
         } else {
           await sendWhatsAppTextMessage({
-            recipient: client.phone,
+            recipient: clientPhone,
             message: whatsappText,
             priority: 1,
           });

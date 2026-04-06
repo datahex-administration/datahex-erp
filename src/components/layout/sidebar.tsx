@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/auth-provider";
 import { navigationGroups } from "@/components/layout/navigation";
 import {
-  Building2,
   LogOut,
   ChevronDown,
   ChevronLeft,
@@ -134,14 +134,21 @@ export function Sidebar({
 
   const asideContent = (
     <>
-      <div className="flex items-center justify-between border-b px-4 py-4">
+      <div className="flex items-center justify-between border-b border-border/70 bg-background/70 px-4 py-4 backdrop-blur-xl">
         <Link href="/dashboard" onClick={handleNavigateOnMobile} className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <Building2 className="h-5 w-5" />
+          <div className="flex h-11 w-11 shrink-0 items-center overflow-hidden rounded-2xl border border-primary/10 bg-[linear-gradient(135deg,rgba(79,107,246,0.18),rgba(126,87,255,0.18))] shadow-[0_16px_34px_rgba(76,92,201,0.18)]">
+            <Image
+              src="/logo.webp"
+              alt={appName}
+              width={204}
+              height={103}
+              priority
+              className="ml-1 h-9 w-auto max-w-none"
+            />
           </div>
           {!desktopCollapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-none">{appName}</p>
+              <p className="truncate text-sm font-semibold leading-none tracking-[-0.02em]">{appName}</p>
               <p className="mt-1 truncate text-xs text-muted-foreground">
                 {company?.name || "Workspace"}
               </p>
@@ -192,7 +199,7 @@ export function Sidebar({
                 <section
                   key={group.id}
                   className={cn(
-                    "overflow-hidden rounded-2xl border bg-white/80",
+                    "overflow-hidden rounded-2xl border bg-card/75 backdrop-blur-xl",
                     groupIsActive && "border-primary/20 shadow-sm"
                   )}
                 >
@@ -274,7 +281,7 @@ export function Sidebar({
       </ScrollArea>
 
       <div className="border-t px-3 py-3">
-        <div className="flex items-center gap-3 rounded-2xl bg-muted/60 px-3 py-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/70 px-3 py-3 backdrop-blur-xl">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarFallback className="text-xs font-medium">{userInitials}</AvatarFallback>
           </Avatar>
@@ -320,7 +327,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-[320px] flex-col border-r border-border bg-white/95 shadow-xl backdrop-blur transition-[transform,width] duration-300 md:max-w-none md:shadow-none",
+          "fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-[320px] flex-col border-r border-border/80 bg-background/88 shadow-[0_24px_48px_rgba(52,61,118,0.16)] backdrop-blur-xl transition-[transform,width] duration-300 md:max-w-none md:shadow-none",
           sidebarWidthClass,
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}

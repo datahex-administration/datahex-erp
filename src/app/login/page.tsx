@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
@@ -109,13 +110,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-2">
-            <Building2 className="w-8 h-8 text-primary-foreground" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(79,107,246,0.2),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(126,87,255,0.18),transparent_26%),linear-gradient(180deg,rgba(248,250,255,0.98),rgba(239,243,255,0.94))]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(89,110,255,0.18),transparent_62%)] blur-3xl" />
+      <Card className="relative w-full max-w-md border-white/60 bg-card/82 shadow-[0_28px_72px_rgba(58,68,128,0.2)] backdrop-blur-xl">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto flex h-20 items-center justify-center rounded-[2rem] border border-white/50 bg-[linear-gradient(135deg,rgba(79,107,246,0.18),rgba(126,87,255,0.16))] px-6 shadow-[0_18px_44px_rgba(76,92,201,0.18)]">
+            <Image
+              src="/logo.webp"
+              alt={appName}
+              width={204}
+              height={103}
+              priority
+              className="h-11 w-auto"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">{appName}</CardTitle>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/75">
+              Secure ERP Access
+            </p>
+            <CardTitle className="text-2xl font-semibold tracking-[-0.03em]">{appName}</CardTitle>
+          </div>
           <p className="text-muted-foreground text-sm">
             Enter your credentials to access the dashboard
           </p>

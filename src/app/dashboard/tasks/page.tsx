@@ -25,6 +25,7 @@ interface TaskItem {
   description?: string;
   status: "planned" | "in_progress" | "completed";
   durationHours?: number;
+  workDate: string;
   lastReportedAt?: string;
   createdAt: string;
 }
@@ -44,6 +45,7 @@ const STATUS_VARIANTS: Record<TaskItem["status"], "secondary" | "default" | "out
 export default function DailyTasksPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [recentTasks, setRecentTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
@@ -56,16 +58,29 @@ export default function DailyTasksPage() {
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}`);
 
-    if (res.ok) {
-      const data = await res.json();
-      setTasks(Array.isArray(data) ? data : []);
-    } else {
+    try {
+      const [selectedDayResponse, recentResponse] = await Promise.all([
+        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}`),
+        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}&days=7`),
+      ]);
+
+      if (selectedDayResponse.ok) {
+        const data = await selectedDayResponse.json();
+        setTasks(Array.isArray(data) ? data : []);
+      } else {
+        toast.error("Failed to load daily tasks");
+      }
+
+      if (recentResponse.ok) {
+        const data = await recentResponse.json();
+        setRecentTasks(Array.isArray(data) ? data : []);
+      }
+    } catch {
       toast.error("Failed to load daily tasks");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, [selectedDate]);
 
   useEffect(() => {
@@ -84,6 +99,21 @@ export default function DailyTasksPage() {
       totalHours,
     };
   }, [tasks]);
+
+  const recentDays = useMemo(() => {
+    const grouped = new Map<string, { date: string; total: number; completed: number; totalHours: number }>();
+
+    recentTasks.forEach((task) => {
+      const dateKey = format(new Date(task.workDate || task.createdAt), "yyyy-MM-dd");
+      const current = grouped.get(dateKey) || { date: dateKey, total: 0, completed: 0, totalHours: 0 };
+      current.total += 1;
+      current.completed += task.status === "completed" ? 1 : 0;
+      current.totalHours += task.durationHours || 0;
+      grouped.set(dateKey, current);
+    });
+
+    return Array.from(grouped.values()).sort((left, right) => right.date.localeCompare(left.date));
+  }, [recentTasks]);
 
   const handleCreateTask = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -105,6 +135,7 @@ export default function DailyTasksPage() {
       toast.success("Task added to your daily report");
       setForm({ title: "", description: "", status: "planned", durationHours: "" });
       setTasks((currentTasks) => [data, ...currentTasks]);
+      setRecentTasks((currentTasks) => [data, ...currentTasks]);
     } else {
       toast.error(data.error || "Failed to create task");
     }
@@ -125,6 +156,9 @@ export default function DailyTasksPage() {
       setTasks((currentTasks) =>
         currentTasks.map((task) => (task._id === taskId ? data : task))
       );
+      setRecentTasks((currentTasks) =>
+        currentTasks.map((task) => (task._id === taskId ? data : task))
+      );
       toast.success("Task updated");
     } else {
       toast.error(data.error || "Failed to update task");
@@ -136,6 +170,7 @@ export default function DailyTasksPage() {
 
     if (res.ok) {
       setTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId));
+      setRecentTasks((currentTasks) => currentTasks.filter((task) => task._id !== taskId));
       toast.success("Task removed");
     } else {
       const data = await res.json();
@@ -298,6 +333,47 @@ export default function DailyTasksPage() {
         </Card>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent history</CardTitle>
+              <CardDescription>
+                Tasks are stored by work date. Jump to any recent day instead of losing older entries.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentDays.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No recent task history yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {recentDays.map((day) => (
+                    <button
+                      key={day.date}
+                      type="button"
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition-colors ${
+                        selectedDate === day.date
+                          ? "border-primary bg-primary/5"
+                          : "border-border/70 hover:bg-accent/40"
+                      }`}
+                    >
+                      <span>
+                        <span className="block text-sm font-medium">
+                          {format(new Date(day.date), "dd MMM yyyy")}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {day.completed}/{day.total} completed • {day.totalHours}h tracked
+                        </span>
+                      </span>
+                      <Badge variant={selectedDate === day.date ? "default" : "secondary"}>
+                        {day.total}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>

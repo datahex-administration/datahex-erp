@@ -12,12 +12,12 @@ export async function GET() {
 
   await connectDB();
 
-  const user = await User.findById(session.userId).select("-pin").lean();
+  const user = await User.findById(session.userId).select("-pin").lean().exec();
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const company = await Company.findById(session.companyId).lean();
+  const company = await Company.findById(session.companyId).lean().exec();
 
   return NextResponse.json({
     user,

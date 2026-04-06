@@ -37,6 +37,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { CurrencySelect } from "@/components/forms/currency-select";
+import { extractCollectionData } from "@/lib/form-options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -102,12 +104,12 @@ export default function ExpensesPage() {
     if (statusFilter !== "all") params.set("status", statusFilter);
     Promise.all([
       fetch(`/api/expenses?${params}`).then((r) => r.json()),
-      fetch("/api/projects").then((r) => r.json()),
+      fetch("/api/projects?limit=100").then((r) => r.json()),
     ]).then(([e, p]) => {
       setExpenses(e.data ?? (Array.isArray(e) ? e : []));
       setTotalPages(e.totalPages ?? 1);
       setTotal(e.total ?? 0);
-      setProjects(Array.isArray(p) ? p : (p.data ?? []));
+      setProjects(extractCollectionData<AnyObj>(p));
       setLoading(false);
     });
   }, [page, search, typeFilter, statusFilter]);
@@ -230,7 +232,10 @@ export default function ExpensesPage() {
                   <Label>Amount *</Label>
                   <div className="flex gap-2">
                     <Input type="number" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="flex-1" />
-                    <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} className="w-20" maxLength={5} />
+                    <CurrencySelect
+                      value={form.currency}
+                      onValueChange={(value) => setForm({ ...form, currency: value })}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

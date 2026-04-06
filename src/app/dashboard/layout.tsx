@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
+    <div className="min-h-screen bg-background [background-image:radial-gradient(circle_at_top_left,rgba(79,107,246,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(126,87,255,0.1),transparent_22%)]">
       <Sidebar
         desktopCollapsed={desktopCollapsed}
         mobileOpen={mobileOpen}
@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           desktopCollapsed ? "md:ml-24" : "md:ml-80"
         )}
       >
-        <div className="sticky top-0 z-30 border-b border-border/70 bg-gray-50/95 backdrop-blur">
+        <div className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
             <Button
               variant="outline"
@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Button
               type="button"
               variant="outline"
-              className="h-11 flex-1 justify-between rounded-2xl px-4 text-left text-muted-foreground shadow-sm"
+              className="h-11 flex-1 justify-between rounded-2xl border-primary/10 bg-card/70 px-4 text-left text-muted-foreground shadow-sm backdrop-blur"
               onClick={() => setCommandPaletteOpen(true)}
             >
               <span className="flex items-center gap-3 overflow-hidden">
@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </span>
             </Button>
 
-            <div className="hidden min-w-0 rounded-2xl border border-border/70 bg-white px-4 py-2 text-right shadow-sm lg:block">
+            <div className="hidden min-w-0 rounded-2xl border border-border/70 bg-card/75 px-4 py-2 text-right shadow-sm backdrop-blur lg:block">
               <p className="truncate text-sm font-semibold">{company?.name || "Datahex ERP"}</p>
               <p className="truncate text-xs text-muted-foreground">{user.role.replace("_", " ")}</p>
             </div>

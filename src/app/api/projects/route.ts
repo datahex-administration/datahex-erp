@@ -31,8 +31,9 @@ export async function GET(request: NextRequest) {
 
   const [projects, total] = await Promise.all([
     Project.find(filter)
-      .populate("clientId", "name company email")
-      .populate("managerId", "name employeeId")
+      .populate("clientId", "name company email contactPersonName")
+      .populate("managerId", "name employeeId designation userId")
+      .populate("managerUserId", "name email role")
       .populate("companyId", "name code")
       .sort({ updatedAt: -1 })
       .skip((page - 1) * limit)
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name, clientId, description, status, startDate, deadline,
-    managerId, team, budget, currency, companyId: bodyCompanyId,
+    managerId, managerUserId, team, budget, currency, companyId: bodyCompanyId,
   } = body;
 
   if (!name?.trim() || !clientId) {
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
     startDate: startDate ? new Date(startDate) : undefined,
     deadline: deadline ? new Date(deadline) : undefined,
     managerId: managerId || undefined,
+    managerUserId: managerUserId || undefined,
     team: team || [],
     budget: budget ? Number(budget) : undefined,
     currency: currency || "INR",

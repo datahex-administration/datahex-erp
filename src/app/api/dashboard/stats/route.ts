@@ -43,22 +43,22 @@ export async function GET() {
     recentProjects,
     overdueInvoices,
   ] = await Promise.all([
-    Employee.countDocuments({ ...companyFilter, status: "active" }),
-    Project.countDocuments(companyFilter),
-    Project.countDocuments({ ...companyFilter, status: "in_progress" }),
-    Client.countDocuments(companyFilter),
+    Employee.countDocuments({ ...companyFilter, status: "active" }).exec(),
+    Project.countDocuments(companyFilter).exec(),
+    Project.countDocuments({ ...companyFilter, status: "in_progress" }).exec(),
+    Client.countDocuments(companyFilter).exec(),
     Invoice.aggregate([
       { $match: { ...companyFilter } },
       { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
+    ]).exec(),
     Invoice.aggregate([
       { $match: { ...companyFilter, status: "paid" } },
       { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
+    ]).exec(),
     Invoice.aggregate([
       { $match: { ...companyFilter, status: { $in: ["sent", "overdue"] } } },
       { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
+    ]).exec(),
     Expense.aggregate([
       {
         $match: {
@@ -68,31 +68,33 @@ export async function GET() {
         },
       },
       { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]),
-    Leave.countDocuments({ ...companyFilter, status: "pending" }),
+    ]).exec(),
+    Leave.countDocuments({ ...companyFilter, status: "pending" }).exec(),
     session.role === "super_admin"
-      ? Company.countDocuments({ isActive: true })
+      ? Company.countDocuments({ isActive: true }).exec()
       : Promise.resolve(1),
     Subscription.countDocuments({
       ...companyFilter,
       status: "active",
       renewalDate: { $lte: next30, $gte: now },
-    }),
+    }).exec(),
     Invoice.find(companyFilter)
       .populate("clientId", "name company")
       .sort({ createdAt: -1 })
       .limit(5)
-      .lean(),
+      .lean()
+      .exec(),
     Project.find(companyFilter)
       .populate("clientId", "name")
       .sort({ updatedAt: -1 })
       .limit(5)
-      .lean(),
+      .lean()
+      .exec(),
     Invoice.countDocuments({
       ...companyFilter,
       status: "sent",
       dueDate: { $lt: now },
-    }),
+    }).exec(),
   ]);
 
   // Monthly revenue for last 6 months
@@ -112,7 +114,7 @@ export async function GET() {
       },
     },
     { $sort: { "_id.year": 1, "_id.month": 1 } },
-  ]);
+  ]).exec();
 
   // Expense breakdown by category
   const expensesByCategory = await Expense.aggregate([
@@ -120,13 +122,13 @@ export async function GET() {
     { $group: { _id: "$category", total: { $sum: "$amount" } } },
     { $sort: { total: -1 } },
     { $limit: 6 },
-  ]);
+  ]).exec();
 
   // Project status distribution
   const projectsByStatus = await Project.aggregate([
     { $match: companyFilter },
     { $group: { _id: "$status", count: { $sum: 1 } } },
-  ]);
+  ]).exec();
 
   return NextResponse.json({
     employees,

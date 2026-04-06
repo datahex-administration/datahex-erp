@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+import { EmployeeFormDialog } from "@/components/dashboard/employee-form-dialog";
+import { SalaryIncrementDialog } from "@/components/dashboard/salary-increment-dialog";
 
 interface EmployeeDetail {
   _id: string;
@@ -61,8 +63,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
   const [employee, setEmployee] = useState<EmployeeDetail | null>(null);
   const [increments, setIncrements] = useState<SalaryIncrement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [incrementDialogOpen, setIncrementDialogOpen] = useState(false);
 
-  useEffect(() => {
+  const loadEmployeeData = useCallback(() => {
+    setLoading(true);
     Promise.all([
       fetch(`/api/employees/${id}`).then((r) => r.json()),
       fetch(`/api/salary/increments?employeeId=${id}`).then((r) => r.ok ? r.json() : []),
@@ -72,6 +77,10 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    loadEmployeeData();
+  }, [loadEmployeeData]);
 
   if (loading) {
     return (
@@ -110,12 +119,31 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
             <p className="text-muted-foreground mt-1 font-mono">{employee.employeeId}</p>
           </div>
         </div>
-        <Link href={`/dashboard/employees/${id}/edit`}>
-          <Button variant="outline">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIncrementDialogOpen(true)}>
+            <Wallet className="mr-2 h-4 w-4" /> Update Salary
+          </Button>
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" /> Edit
           </Button>
-        </Link>
+        </div>
       </div>
+
+      <EmployeeFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        employee={employee}
+        onSaved={loadEmployeeData}
+      />
+
+      <SalaryIncrementDialog
+        open={incrementDialogOpen}
+        onOpenChange={setIncrementDialogOpen}
+        employeeId={employee._id}
+        currentSalary={employee.salary}
+        currency={employee.currency}
+        onSaved={loadEmployeeData}
+      />
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -182,8 +210,11 @@ export default function EmployeeDetailPage({ params }: { params: Promise<{ id: s
 
         <TabsContent value="salary" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
               <CardTitle>Salary Increment History</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setIncrementDialogOpen(true)}>
+                <Wallet className="mr-2 h-4 w-4" /> Add Increment
+              </Button>
             </CardHeader>
             <CardContent>
               {increments.length === 0 ? (

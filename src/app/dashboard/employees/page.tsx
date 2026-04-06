@@ -22,10 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Users, Eye } from "lucide-react";
+import { Plus, Search, Users, Eye, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { EmployeeFormDialog } from "@/components/dashboard/employee-form-dialog";
+import { toast } from "sonner";
 
 interface EmployeeData {
   _id: string;
@@ -59,6 +61,8 @@ export default function EmployeesPage() {
   const { user } = useAuth();
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeData | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -67,6 +71,7 @@ export default function EmployeesPage() {
   const [total, setTotal] = useState(0);
 
   const fetchEmployees = useCallback(async () => {
+    setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "10");
@@ -91,6 +96,32 @@ export default function EmployeesPage() {
     return () => clearTimeout(timer);
   }, [fetchEmployees]);
 
+  const openCreateDialog = () => {
+    setEditingEmployee(null);
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (employee: EmployeeData) => {
+    setEditingEmployee(employee);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async (employee: EmployeeData) => {
+    if (!confirm(`Terminate ${employee.name}?`)) {
+      return;
+    }
+
+    const response = await fetch(`/api/employees/${employee._id}`, { method: "DELETE" });
+
+    if (response.ok) {
+      toast.success("Employee terminated");
+      fetchEmployees();
+    } else {
+      const payload = await response.json().catch(() => ({ error: "Failed to terminate employee" }));
+      toast.error(payload.error || "Failed to terminate employee");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -112,13 +143,21 @@ export default function EmployeesPage() {
             { key: "currency", label: "Currency" },
             { key: "status", label: "Status" },
           ]} filename="employees" />
-          <Link href="/dashboard/employees/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Employee
-            </Button>
-          </Link>
+          <Button onClick={openCreateDialog}>
+            <Plus className="mr-2 h-4 w-4" /> Add Employee
+          </Button>
         </div>
       </div>
+
+      <EmployeeFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        employee={editingEmployee}
+        onSaved={() => {
+          setPage(1);
+          fetchEmployees();
+        }}
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -180,7 +219,7 @@ export default function EmployeesPage() {
                     <TableHead>Salary</TableHead>
                     <TableHead>Status</TableHead>
                     {user?.role === "super_admin" && <TableHead>Company</TableHead>}
-                    <TableHead className="w-[80px]">View</TableHead>
+                    <TableHead className="w-[140px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -212,11 +251,19 @@ export default function EmployeesPage() {
                         <TableCell className="text-sm">{emp.companyId?.code}</TableCell>
                       )}
                       <TableCell>
-                        <Link href={`/dashboard/employees/${emp._id}`}>
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
+                        <div className="flex items-center gap-1">
+                          <Link href={`/dashboard/employees/${emp._id}`}>
+                            <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(emp)}>
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        </Link>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(emp)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

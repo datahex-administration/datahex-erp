@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { CurrencySelect } from "@/components/forms/currency-select";
+import { extractCollectionData } from "@/lib/form-options";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -49,11 +51,11 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/clients").then((r) => r.json()),
-      fetch("/api/projects").then((r) => r.json()),
+      fetch("/api/clients?limit=100").then((r) => r.json()),
+      fetch("/api/projects?limit=100").then((r) => r.json()),
     ]).then(([c, p]) => {
-      setClients(Array.isArray(c) ? c : []);
-      setProjects(Array.isArray(p) ? p : []);
+      setClients(extractCollectionData<AnyObj>(c));
+      setProjects(extractCollectionData<AnyObj>(p));
     });
   }, []);
 
@@ -166,7 +168,11 @@ export default function NewInvoicePage() {
             </div>
             <div className="space-y-2">
               <Label>Currency</Label>
-              <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} maxLength={5} />
+              <CurrencySelect
+                value={form.currency}
+                onValueChange={(value) => setForm({ ...form, currency: value })}
+                triggerClassName="w-full"
+              />
             </div>
           </CardContent>
         </Card>

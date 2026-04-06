@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/providers/auth-provider";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +39,7 @@ import {
   GitBranch,
   FileText,
   Clock,
-  Edit,
+  Pencil,
   Send,
   CheckCircle,
   XCircle,
@@ -49,6 +47,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ProjectFormDialog } from "@/components/dashboard/project-form-dialog";
+import { CurrencySelect } from "@/components/forms/currency-select";
 
 type Tab = "overview" | "technical" | "proposals" | "stages";
 
@@ -82,14 +82,12 @@ type AnyObj = Record<string, any>;
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
-  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [project, setProject] = useState<AnyObj | null>(null);
   const [details, setDetails] = useState<AnyObj | null>(null);
   const [proposals, setProposals] = useState<AnyObj[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     const [pRes, dRes, prRes] = await Promise.all([
@@ -106,7 +104,45 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     setLoading(false);
   }, [id]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      fetch(`/api/projects/${id}`),
+      fetch(`/api/projects/${id}/details`),
+      fetch(`/api/proposals?projectId=${id}`),
+    ])
+      .then(async ([projectResponse, detailsResponse, proposalsResponse]) => {
+        const [projectPayload, detailsPayload, proposalsPayload] = await Promise.all([
+          projectResponse.json(),
+          detailsResponse.json(),
+          proposalsResponse.json(),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setProject(projectPayload);
+        setDetails(detailsPayload);
+        setProposals(Array.isArray(proposalsPayload) ? proposalsPayload : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setProject(null);
+        setDetails(null);
+        setProposals([]);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   if (loading) {
     return (
@@ -155,7 +191,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             )}
           </div>
         </div>
+        <Button variant="outline" onClick={() => setProjectDialogOpen(true)}>
+          <Pencil className="mr-2 h-4 w-4" /> Edit Project
+        </Button>
       </div>
+
+      <ProjectFormDialog
+        open={projectDialogOpen}
+        onOpenChange={setProjectDialogOpen}
+        project={project}
+        onSaved={() => loadData()}
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
@@ -177,7 +223,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Tab Content */}
       {tab === "overview" && (
-        <OverviewTab project={project} setProject={setProject} id={id} />
+        <OverviewTab project={project} />
       )}
       {tab === "technical" && (
         <TechnicalTab details={details} setDetails={setDetails} id={id} companyId={project.companyId?._id || project.companyId} />
@@ -197,39 +243,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 }
 
 /* ────────── OVERVIEW TAB ────────── */
-function OverviewTab({ project, setProject, id }: { project: AnyObj; setProject: (p: AnyObj) => void; id: string }) {
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    name: project.name,
-    description: project.description || "",
-    status: project.status,
-    budget: project.budget?.toString() || "",
-    currency: project.currency || "INR",
-    startDate: project.startDate ? format(new Date(project.startDate), "yyyy-MM-dd") : "",
-    deadline: project.deadline ? format(new Date(project.deadline), "yyyy-MM-dd") : "",
-  });
-
-  const handleSave = async () => {
-    setSaving(true);
-    const res = await fetch(`/api/projects/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        budget: form.budget ? Number(form.budget) : undefined,
-      }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setProject(updated);
-      setEditing(false);
-      toast.success("Project updated");
-    } else {
-      toast.error("Failed to update project");
-    }
-    setSaving(false);
-  };
+function OverviewTab({ project }: { project: AnyObj }) {
 
   const stagesCompleted = project.stages?.filter((s: AnyObj) => s.status === "completed").length || 0;
   const totalStages = project.stages?.length || 0;
@@ -238,70 +252,21 @@ function OverviewTab({ project, setProject, id }: { project: AnyObj; setProject:
     <div className="grid gap-6 md:grid-cols-3">
       <div className="md:col-span-2 space-y-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Project Info</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => setEditing(!editing)}>
-              <Edit className="h-4 w-4 mr-1" />
-              {editing ? "Cancel" : "Edit"}
-            </Button>
           </CardHeader>
           <CardContent>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Description</Label>
-                  <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={form.status} onValueChange={(v) => v && setForm({ ...form, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([k, l]) => (
-                        <SelectItem key={k} value={k}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Budget</Label>
-                  <div className="flex gap-2">
-                    <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} className="flex-1" />
-                    <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} className="w-20" maxLength={5} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Deadline</Label>
-                  <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-                </div>
-                <div className="sm:col-span-2 flex justify-end">
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    <Save className="h-4 w-4 mr-1" />Save
-                  </Button>
-                </div>
+            <div className="space-y-4">
+              {project.description && (
+                <p className="text-sm text-muted-foreground">{project.description}</p>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <InfoRow icon={<Calendar className="h-4 w-4" />} label="Start Date" value={project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "—"} />
+                <InfoRow icon={<Calendar className="h-4 w-4" />} label="Deadline" value={project.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "—"} />
+                <InfoRow icon={<DollarSign className="h-4 w-4" />} label="Budget" value={project.budget ? `${project.currency} ${project.budget.toLocaleString()}` : "—"} />
+                <InfoRow icon={<Clock className="h-4 w-4" />} label="Progress" value={`${stagesCompleted}/${totalStages} stages`} />
               </div>
-            ) : (
-              <div className="space-y-4">
-                {project.description && (
-                  <p className="text-sm text-muted-foreground">{project.description}</p>
-                )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoRow icon={<Calendar className="h-4 w-4" />} label="Start Date" value={project.startDate ? format(new Date(project.startDate), "MMM d, yyyy") : "—"} />
-                  <InfoRow icon={<Calendar className="h-4 w-4" />} label="Deadline" value={project.deadline ? format(new Date(project.deadline), "MMM d, yyyy") : "—"} />
-                  <InfoRow icon={<DollarSign className="h-4 w-4" />} label="Budget" value={project.budget ? `${project.currency} ${project.budget.toLocaleString()}` : "—"} />
-                  <InfoRow icon={<Clock className="h-4 w-4" />} label="Progress" value={`${stagesCompleted}/${totalStages} stages`} />
-                </div>
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -314,8 +279,14 @@ function OverviewTab({ project, setProject, id }: { project: AnyObj; setProject:
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{project.clientId.name}</p>
                 {project.clientId.company && <p className="text-muted-foreground">{project.clientId.company}</p>}
+                {project.clientId.contactPersonName && (
+                  <p className="text-muted-foreground">Contact: {project.clientId.contactPersonName}</p>
+                )}
                 {project.clientId.email && <p className="text-muted-foreground">{project.clientId.email}</p>}
                 {project.clientId.phone && <p className="text-muted-foreground">{project.clientId.phone}</p>}
+                {project.clientId.address && (
+                  <p className="whitespace-pre-line text-muted-foreground">{project.clientId.address}</p>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No client assigned</p>
@@ -326,12 +297,14 @@ function OverviewTab({ project, setProject, id }: { project: AnyObj; setProject:
         <Card>
           <CardHeader><CardTitle className="text-base">Team</CardTitle></CardHeader>
           <CardContent>
-            {project.managerId && (
+            {(project.managerUserId || project.managerId) && (
               <div className="flex items-center gap-2 mb-3 pb-3 border-b text-sm">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">{project.managerId.name}</p>
-                  <p className="text-xs text-muted-foreground">Manager — {project.managerId.designation}</p>
+                  <p className="font-medium">{project.managerUserId?.name || project.managerId?.userId?.name || project.managerId?.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Manager — {project.managerId?.designation || project.managerUserId?.role?.replace("_", " ") || "Assigned user"}
+                  </p>
                 </div>
               </div>
             )}
@@ -540,7 +513,11 @@ function TechnicalTab({
           </div>
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Input value={form.serverCostCurrency} onChange={(e) => setForm({ ...form, serverCostCurrency: e.target.value.toUpperCase() })} maxLength={5} />
+            <CurrencySelect
+              value={form.serverCostCurrency}
+              onValueChange={(value) => setForm({ ...form, serverCostCurrency: value })}
+              triggerClassName="w-full"
+            />
           </div>
           <div className="space-y-2">
             <Label>Frequency</Label>
@@ -673,7 +650,10 @@ function ProposalsTab({
                   <Label>Amount *</Label>
                   <div className="flex gap-2">
                     <Input type="number" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="flex-1" />
-                    <Input value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} className="w-20" maxLength={5} />
+                    <CurrencySelect
+                      value={form.currency}
+                      onValueChange={(value) => setForm({ ...form, currency: value })}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">

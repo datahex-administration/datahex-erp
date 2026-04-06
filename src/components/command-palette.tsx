@@ -142,7 +142,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     <div className="fixed inset-0 z-50">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onOpenChange(false)} />
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg">
-        <div className="bg-white rounded-xl shadow-2xl border overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-border/80 bg-card/88 shadow-2xl backdrop-blur-xl">
           {/* Search Input */}
           <div className="flex items-center border-b px-4">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

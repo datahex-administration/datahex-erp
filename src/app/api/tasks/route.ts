@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     requestedUserId && session.role !== "staff" ? requestedUserId : session.userId;
 
   let dateRange;
+  const days = Math.min(Math.max(Number(searchParams.get("days")) || 1, 1), 60);
 
   try {
     dateRange = getDateRange(searchParams.get("date"));
@@ -40,15 +41,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid date" }, { status: 400 });
   }
 
+  const rangeStart = new Date(dateRange.end);
+  rangeStart.setHours(0, 0, 0, 0);
+  rangeStart.setDate(rangeStart.getDate() - (days - 1));
+
   const tasks = await DailyTask.find({
     companyId: session.companyId,
     userId: targetUserId,
     workDate: {
-      $gte: dateRange.start,
+      $gte: rangeStart,
       $lte: dateRange.end,
     },
   })
-    .sort({ createdAt: -1 })
+    .sort({ workDate: -1, createdAt: -1 })
     .lean();
 
   return NextResponse.json(tasks);

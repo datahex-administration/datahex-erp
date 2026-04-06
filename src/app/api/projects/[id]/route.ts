@@ -14,8 +14,16 @@ export async function GET(
   await connectDB();
 
   const project = await Project.findById(id)
-    .populate("clientId", "name company email phone address")
-    .populate("managerId", "name employeeId designation")
+    .populate("clientId", "name company email phone address contactPersonName additionalDetails")
+    .populate({
+      path: "managerId",
+      select: "name employeeId designation userId",
+      populate: {
+        path: "userId",
+        select: "name email role",
+      },
+    })
+    .populate("managerUserId", "name email role")
     .populate("team", "name employeeId designation")
     .populate("companyId", "name code currency")
     .lean();
@@ -40,10 +48,13 @@ export async function PUT(
   // Handle date conversions
   if (body.startDate) body.startDate = new Date(body.startDate);
   if (body.deadline) body.deadline = new Date(body.deadline);
+  if ("managerId" in body && !body.managerId) body.managerId = undefined;
+  if ("managerUserId" in body && !body.managerUserId) body.managerUserId = undefined;
 
   const project = await Project.findByIdAndUpdate(id, body, { new: true })
-    .populate("clientId", "name company email")
-    .populate("managerId", "name employeeId")
+    .populate("clientId", "name company email contactPersonName")
+    .populate("managerId", "name employeeId designation userId")
+    .populate("managerUserId", "name email role")
     .populate("team", "name employeeId");
 
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });

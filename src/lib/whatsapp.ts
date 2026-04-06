@@ -28,16 +28,26 @@ interface WhatsAppApiResponse<T = unknown> {
   data: T;
 }
 
+function normalizeConfigValue(value?: string | null) {
+  return value?.trim() || "";
+}
+
 function getWhatsAppConfig() {
   const url =
-    process.env.WHATSAPP_API_URL ||
-    process.env.whatsappCampaignUrl ||
+    normalizeConfigValue(process.env.WHATSAPP_API_URL) ||
+    normalizeConfigValue(process.env.whatsappCampaignUrl) ||
     "https://app.dxing.in/api/send/whatsapp";
 
-  const secret = process.env.WHATSAPP_API_SECRET || process.env.whatsappCampaignAccessToken;
-  const account = process.env.WHATSAPP_ACCOUNT_ID || process.env.whatsappCampaignAccount;
+  const secret =
+    normalizeConfigValue(process.env.WHATSAPP_API_SECRET) ||
+    normalizeConfigValue(process.env.whatsappCampaignAccessToken);
+  const account =
+    normalizeConfigValue(process.env.WHATSAPP_ACCOUNT_ID) ||
+    normalizeConfigValue(process.env.whatsappCampaignAccount);
   const provider =
-    process.env.WHATSAPP_ACCOUNT_PROVIDER || process.env.whatsappCampaignAccountProvider || null;
+    normalizeConfigValue(process.env.WHATSAPP_ACCOUNT_PROVIDER) ||
+    normalizeConfigValue(process.env.whatsappCampaignAccountProvider) ||
+    null;
 
   return {
     url,
@@ -47,8 +57,6 @@ function getWhatsAppConfig() {
     configured: Boolean(url && secret && account),
   };
 }
-
-const whatsappConfig = getWhatsAppConfig();
 
 export function normalizeWhatsAppRecipient(recipient: string) {
   const trimmed = recipient.trim();
@@ -68,6 +76,21 @@ export function normalizeWhatsAppRecipient(recipient: string) {
   return trimmed.replace(/\D/g, "");
 }
 
+export function isValidWhatsAppRecipient(recipient: string) {
+  const normalized = normalizeWhatsAppRecipient(recipient);
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (normalized.includes("@") || /[a-z]/i.test(normalized)) {
+    return normalized.length >= 3;
+  }
+
+  const digits = normalized.startsWith("+") ? normalized.slice(1) : normalized;
+  return /^\d{8,15}$/.test(digits);
+}
+
 async function parseResponse(response: Response) {
   const text = await response.text();
 
@@ -82,14 +105,44 @@ async function parseResponse(response: Response) {
   }
 }
 
+function formatWhatsAppError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return new Error("WhatsApp delivery failed");
+  }
+
+  const message = error.message.toLowerCase();
+
+  if (message.includes("account doesn't exist") || message.includes("no whatsapp account found")) {
+    return new Error(
+      "WhatsApp delivery account is invalid. Update WHATSAPP_ACCOUNT_ID and WHATSAPP_ACCOUNT_PROVIDER."
+    );
+  }
+
+  if (message.includes("invalid parameters")) {
+    return new Error(
+      "WhatsApp delivery request was rejected. Check the recipient number and provider configuration."
+    );
+  }
+
+  return error;
+}
+
 export async function sendWhatsAppMessage(options: WhatsAppMessageOptions) {
+  const whatsappConfig = getWhatsAppConfig();
+
   if (!whatsappConfig.configured) {
-    throw new Error("WhatsApp delivery is not configured");
+    throw new Error(
+      "WhatsApp delivery is not configured. Set WHATSAPP_API_URL, WHATSAPP_API_SECRET, and WHATSAPP_ACCOUNT_ID."
+    );
   }
 
   const recipient = normalizeWhatsAppRecipient(options.recipient);
   if (!recipient) {
     throw new Error("WhatsApp recipient is required");
+  }
+
+  if (!isValidWhatsAppRecipient(recipient)) {
+    throw new Error("WhatsApp recipient number is invalid.");
   }
 
   const payload: Record<string, unknown> = {
@@ -101,6 +154,12 @@ export async function sendWhatsAppMessage(options: WhatsAppMessageOptions) {
     priority: options.priority ?? 2,
   };
 
+  if (whatsappConfig.provider) {
+    payload.provider = whatsappConfig.provider;
+    payload.account_provider = whatsappConfig.provider;
+    payload.accountProvider = whatsappConfig.provider;
+  }
+
   if (options.shortener) {
     payload.shortener = options.shortener;
   }
@@ -111,22 +170,26 @@ export async function sendWhatsAppMessage(options: WhatsAppMessageOptions) {
     payload.document_type = options.documentType;
   }
 
-  const response = await fetch(whatsappConfig.url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await fetch(whatsappConfig.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  const data = await parseResponse(response);
-  const statusCode = Number(data?.status ?? response.status);
+    const data = await parseResponse(response);
+    const statusCode = Number(data?.status ?? response.status);
 
-  if (!response.ok || statusCode >= 400) {
-    throw new Error(data?.message || "Failed to send WhatsApp message");
+    if (!response.ok || statusCode >= 400) {
+      throw new Error(data?.message || "Failed to send WhatsApp message");
+    }
+
+    return data;
+  } catch (error) {
+    throw formatWhatsAppError(error);
   }
-
-  return data;
 }
 
 export async function sendWhatsAppTextMessage(options: BaseWhatsAppMessage) {
@@ -134,6 +197,8 @@ export async function sendWhatsAppTextMessage(options: BaseWhatsAppMessage) {
 }
 
 export function getWhatsAppStatus() {
+  const whatsappConfig = getWhatsAppConfig();
+
   return {
     configured: whatsappConfig.configured,
     provider: whatsappConfig.provider,

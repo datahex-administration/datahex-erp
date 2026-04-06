@@ -18,6 +18,7 @@ import { Plus, Search, Eye, Calendar, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { ProjectFormDialog } from "@/components/dashboard/project-form-dialog";
 
 interface ProjectData {
   _id: string;
@@ -28,8 +29,9 @@ interface ProjectData {
   deadline?: string;
   budget?: number;
   currency: string;
-  clientId?: { _id: string; name: string; company?: string };
+  clientId?: { _id: string; name: string; company?: string; contactPersonName?: string };
   managerId?: { _id: string; name: string; employeeId: string };
+  managerUserId?: { _id: string; name: string; role: string };
   team: Array<{ _id: string; name: string }>;
   updatedAt: string;
 }
@@ -48,6 +50,7 @@ const KANBAN_COLUMNS = ["requirement", "proposal", "in_progress", "review", "com
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"list" | "kanban">("list");
@@ -56,6 +59,7 @@ export default function ProjectsPage() {
   const [total, setTotal] = useState(0);
 
   const fetchProjects = useCallback(async () => {
+    setLoading(true);
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
@@ -75,8 +79,6 @@ export default function ProjectsPage() {
     setLoading(false);
   }, [page, search, statusFilter, view]);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
-
   useEffect(() => {
     const timer = setTimeout(fetchProjects, 300);
     return () => clearTimeout(timer);
@@ -91,6 +93,25 @@ export default function ProjectsPage() {
     fetchProjects();
   };
 
+  const exportProjects = projects.map((project) => ({
+    ...project,
+    managerName: project.managerUserId?.name || project.managerId?.name || "",
+  }));
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string | null) => {
+    if (!value) {
+      return;
+    }
+
+    setStatusFilter(value);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -101,28 +122,42 @@ export default function ProjectsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton data={projects} columns={[
+          <ExportButton data={exportProjects} columns={[
             { key: "name", label: "Name" },
             { key: "status", label: "Status" },
             { key: "clientId.name", label: "Client" },
-            { key: "managerId.name", label: "Manager" },
+            { key: "managerName", label: "Manager" },
             { key: "startDate", label: "Start Date" },
             { key: "deadline", label: "Deadline" },
             { key: "budget", label: "Budget" },
             { key: "currency", label: "Currency" },
           ]} filename="projects" />
-          <Link href="/dashboard/projects/new">
-            <Button><Plus className="mr-2 h-4 w-4" /> New Project</Button>
-          </Link>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> New Project
+          </Button>
         </div>
       </div>
+
+      <ProjectFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSaved={() => {
+          setPage(1);
+          fetchProjects();
+        }}
+      />
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search projects..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Search projects..."
+            className="pl-9"
+            value={search}
+            onChange={(event) => handleSearchChange(event.target.value)}
+          />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+        <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -157,9 +192,14 @@ export default function ProjectsPage() {
                           {STATUS_CONFIG[project.status]?.label || project.status}
                         </Badge>
                       </div>
-                      {project.clientId && (
-                        <p className="text-sm text-muted-foreground">{project.clientId.company || project.clientId.name}</p>
-                      )}
+                      {project.clientId ? (
+                        <div className="space-y-0.5">
+                          <p className="text-sm text-muted-foreground">{project.clientId.name}</p>
+                          {getProjectClientMeta(project.clientId) ? (
+                            <p className="text-xs text-muted-foreground">{getProjectClientMeta(project.clientId)}</p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </CardHeader>
                     <CardContent className="pt-0 space-y-2">
                       {project.description && <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>}
@@ -171,7 +211,11 @@ export default function ProjectsPage() {
                           <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{project.currency} {project.budget.toLocaleString()}</span>
                         )}
                       </div>
-                      {project.managerId && <p className="text-xs text-muted-foreground">Manager: {project.managerId.name}</p>}
+                      {(project.managerUserId || project.managerId) && (
+                        <p className="text-xs text-muted-foreground">
+                          Manager: {project.managerUserId?.name || project.managerId?.name}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 </Link>
@@ -234,4 +278,8 @@ export default function ProjectsPage() {
       </Tabs>
     </div>
   );
+}
+
+function getProjectClientMeta(client: NonNullable<ProjectData["clientId"]>) {
+  return client.contactPersonName || client.company || "";
 }

@@ -9,6 +9,7 @@ export interface IProject extends Document {
   startDate?: Date;
   deadline?: Date;
   managerId?: Types.ObjectId;
+  managerUserId?: Types.ObjectId;
   team: Types.ObjectId[];
   budget?: number;
   currency: string;
@@ -37,6 +38,7 @@ const ProjectSchema = new Schema<IProject>(
     startDate: { type: Date },
     deadline: { type: Date },
     managerId: { type: Schema.Types.ObjectId, ref: "Employee" },
+    managerUserId: { type: Schema.Types.ObjectId, ref: "User" },
     team: [{ type: Schema.Types.ObjectId, ref: "Employee" }],
     budget: { type: Number },
     currency: { type: String, default: "INR" },
