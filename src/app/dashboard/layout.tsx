@@ -6,9 +6,13 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Loader2, Menu, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Bell, Loader2, Menu, Search } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { useEffect, useState, useCallback } from "react";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyObj = Record<string, any>;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, company, loading } = useAuth();
@@ -16,6 +20,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState<AnyObj[]>([]);
+  const [notifCount, setNotifCount] = useState(0);
+  const pathname = usePathname();
+
+  const fetchNotifs = useCallback(() => {
+    fetch("/api/notifications?limit=5")
+      .then((r) => r.json())
+      .then((json) => {
+        setNotifItems(json.data || []);
+        setNotifCount(json.data?.filter((n: AnyObj) => !n.read).length || 0);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchNotifs();
+  }, [user, pathname, fetchNotifs]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -79,6 +101,63 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <kbd>K</kbd>
               </span>
             </Button>
+
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="icon"
+                className="relative"
+                onClick={() => setNotifOpen((v) => !v)}
+                title="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {notifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                    {notifCount > 9 ? "9+" : notifCount}
+                  </span>
+                )}
+              </Button>
+              {notifOpen && (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNotifOpen(false)}
+                    aria-label="Close notifications"
+                  />
+                  <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-border/70 bg-background/95 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center justify-between border-b px-4 py-3">
+                      <p className="text-sm font-semibold">Notifications</p>
+                      <Link
+                        href="/dashboard/notifications"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setNotifOpen(false)}
+                      >
+                        View all
+                      </Link>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {notifItems.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-muted-foreground">No notifications</p>
+                      ) : (
+                        notifItems.map((n) => (
+                          <div
+                            key={n._id}
+                            className={cn(
+                              "border-b px-4 py-3 last:border-0",
+                              !n.read && "bg-accent/30"
+                            )}
+                          >
+                            <p className="text-sm font-medium">{n.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="hidden min-w-0 rounded-2xl border border-border/70 bg-card/75 px-4 py-2 text-right shadow-sm backdrop-blur lg:block">
               <p className="truncate text-sm font-semibold">{company?.name || "Datahex ERP"}</p>

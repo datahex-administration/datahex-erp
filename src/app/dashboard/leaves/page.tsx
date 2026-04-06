@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Table,
   TableBody,
@@ -189,16 +190,16 @@ export default function LeavesPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Employee</Label>
-                <Select value={form.employeeId} onValueChange={(v) => v && setForm({ ...form, employeeId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                  <SelectContent>
-                    {employees.map((e) => (
-                      <SelectItem key={e._id} value={e._id}>
-                        {e.name} ({e.employeeId})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  options={employees.map((e) => ({
+                    value: e._id,
+                    label: `${e.name} (${e.employeeId})`,
+                  }))}
+                  value={form.employeeId}
+                  onValueChange={(v) => setForm({ ...form, employeeId: v })}
+                  placeholder="Select employee"
+                  searchPlaceholder="Search employees..."
+                />
               </div>
 
               {/* Show balance for selected employee */}

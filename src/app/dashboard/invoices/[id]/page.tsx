@@ -207,12 +207,22 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           {/* Header */}
           <div className="flex justify-between mb-8">
             <div>
+              {invoice.companyId?.logo && (
+                <img
+                  src={invoice.companyId.logo}
+                  alt={invoice.companyId.name}
+                  className="h-12 w-auto mb-3 object-contain"
+                />
+              )}
               <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
               <p className="text-lg font-semibold mt-1">{invoice.invoiceNumber}</p>
               {invoice.companyId && (
                 <div className="text-sm text-muted-foreground mt-2">
                   <p className="font-medium text-foreground">{invoice.companyId.name}</p>
-                  {invoice.companyId.address && <p>{invoice.companyId.address}</p>}
+                  {invoice.companyId.billingAddress && <p className="whitespace-pre-line">{invoice.companyId.billingAddress}</p>}
+                  {!invoice.companyId.billingAddress && invoice.companyId.address && <p className="whitespace-pre-line">{invoice.companyId.address}</p>}
+                  {invoice.companyId.gstNumber && <p>GST: {invoice.companyId.gstNumber}</p>}
+                  {invoice.companyId.foreignRegistration && <p>Reg: {invoice.companyId.foreignRegistration}</p>}
                 </div>
               )}
             </div>
@@ -290,6 +300,21 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
             <div className="mt-8 pt-6 border-t">
               <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Notes</p>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoice.notes}</p>
+            </div>
+          )}
+
+          {/* Payment Details */}
+          {invoice.companyId?.paymentDetails && (
+            <div className="mt-6 pt-4 border-t">
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Payment Details</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoice.companyId.paymentDetails}</p>
+            </div>
+          )}
+
+          {/* Footnote */}
+          {invoice.companyId?.footnote && (
+            <div className="mt-6 pt-4 border-t text-center">
+              <p className="text-xs text-muted-foreground italic">{invoice.companyId.footnote}</p>
             </div>
           )}
         </CardContent>

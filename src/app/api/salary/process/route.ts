@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   await connectDB();
   const body = await request.json();
-  const { month, year, companyId: bodyCompanyId, adjustments } = body;
+  const { month, year, companyId: bodyCompanyId, adjustments, paymentType = "full", partialAmounts } = body;
 
   if (!month || !year) {
     return NextResponse.json({ error: "Month and year are required" }, { status: 400 });
@@ -77,11 +77,24 @@ export async function POST(request: NextRequest) {
 
   // Build salary entries
   const adj = adjustments || {};
+  const partial = partialAmounts || {};
   const salaryEntries = employees.map((emp) => {
     const empAdj = adj[emp._id.toString()] || {};
     const deductions = Number(empAdj.deductions) || 0;
     const bonus = Number(empAdj.bonus) || 0;
     const netSalary = emp.salary - deductions + bonus;
+
+    let paidAmount = netSalary;
+    let status: "pending" | "paid" | "partially_paid" = "paid";
+
+    if (paymentType === "partial") {
+      const customAmount = partial[emp._id.toString()];
+      if (customAmount !== undefined && customAmount !== null) {
+        paidAmount = Math.min(Number(customAmount), netSalary);
+      }
+      status = paidAmount >= netSalary ? "paid" : "partially_paid";
+    }
+
     return {
       employeeId: emp._id,
       employeeName: emp.name,
@@ -89,18 +102,23 @@ export async function POST(request: NextRequest) {
       deductions,
       bonus,
       netSalary,
-      status: "pending" as const,
+      paidAmount,
+      remainingAmount: netSalary - paidAmount,
+      status,
     };
   });
 
   const totalAmount = salaryEntries.reduce((sum, e) => sum + e.netSalary, 0);
+  const totalPaid = salaryEntries.reduce((sum, e) => sum + e.paidAmount, 0);
 
   const processing = await SalaryProcessing.create({
     companyId: targetCompanyId,
     month: Number(month),
     year: Number(year),
+    paymentType,
     employees: salaryEntries,
     totalAmount,
+    totalPaid,
     currency: employees[0]?.currency || "INR",
     processedBy: session.userId,
   });
@@ -109,8 +127,8 @@ export async function POST(request: NextRequest) {
   await Expense.create({
     companyId: targetCompanyId,
     category: "Salary",
-    description: `Salary for ${month}/${year}`,
-    amount: totalAmount,
+    description: `Salary ${paymentType === "partial" ? "(Partial)" : ""} for ${month}/${year}`,
+    amount: totalPaid,
     currency: employees[0]?.currency || "INR",
     date: new Date(Number(year), Number(month) - 1, 28),
     type: "salary",

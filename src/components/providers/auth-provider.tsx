@@ -11,6 +11,7 @@ interface User {
   role: string;
   companyId: string;
   whatsappNumber?: string;
+  lastLogin?: string;
 }
 
 interface Company {

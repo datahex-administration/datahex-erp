@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -40,6 +41,9 @@ interface Company {
   createdAt: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyObj = Record<string, any>;
+
 const EXPORT_COLUMNS = [
   { key: "name", label: "Name" },
   { key: "code", label: "Code" },
@@ -58,7 +62,7 @@ export default function CompaniesPage() {
   const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
-  const [form, setForm] = useState({ name: "", code: "", address: "", currency: "INR" });
+  const [form, setForm] = useState({ name: "", code: "", address: "", billingAddress: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
 
   const fetchCompanies = useCallback(() => {
     setLoading(true);
@@ -84,13 +88,23 @@ export default function CompaniesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", code: "", address: "", currency: "INR" });
+    setForm({ name: "", code: "", address: "", billingAddress: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
     setDialogOpen(true);
   };
 
   const openEdit = (company: Company) => {
     setEditing(company);
-    setForm({ name: company.name, code: company.code, address: company.address || "", currency: company.currency });
+    setForm({
+      name: company.name,
+      code: company.code,
+      address: company.address || "",
+      billingAddress: (company as AnyObj).billingAddress || "",
+      gstNumber: (company as AnyObj).gstNumber || "",
+      foreignRegistration: (company as AnyObj).foreignRegistration || "",
+      footnote: (company as AnyObj).footnote || "",
+      paymentDetails: (company as AnyObj).paymentDetails || "",
+      currency: company.currency,
+    });
     setDialogOpen(true);
   };
 
@@ -155,7 +169,29 @@ export default function CompaniesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Address</Label>
-                  <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Office address" />
+                  <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Office address" rows={2} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Billing Address</Label>
+                  <Textarea value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} placeholder="Billing address (shown on invoices)" rows={2} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>GST Number</Label>
+                    <Input value={form.gstNumber} onChange={(e) => setForm({ ...form, gstNumber: e.target.value })} placeholder="22AAAAA0000A1Z5" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Foreign Registration</Label>
+                    <Input value={form.foreignRegistration} onChange={(e) => setForm({ ...form, foreignRegistration: e.target.value })} placeholder="Tax ID / VAT number" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Details</Label>
+                  <Textarea value={form.paymentDetails} onChange={(e) => setForm({ ...form, paymentDetails: e.target.value })} placeholder="Bank name, A/C number, IFSC, UPI ID..." rows={3} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Invoice Footnote</Label>
+                  <Textarea value={form.footnote} onChange={(e) => setForm({ ...form, footnote: e.target.value })} placeholder="Terms, thank you note, etc." rows={2} />
                 </div>
                 <div className="space-y-2">
                   <Label>Default Currency</Label>

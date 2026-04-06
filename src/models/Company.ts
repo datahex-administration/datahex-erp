@@ -4,7 +4,12 @@ export interface ICompany extends Document {
   name: string;
   code: string;
   address?: string;
+  billingAddress?: string;
   logo?: string;
+  gstNumber?: string;
+  foreignRegistration?: string;
+  footnote?: string;
+  paymentDetails?: string;
   currency: string;
   settings: {
     leavePolicy?: {
@@ -24,7 +29,12 @@ const CompanySchema = new Schema<ICompany>(
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
     address: { type: String },
+    billingAddress: { type: String },
     logo: { type: String },
+    gstNumber: { type: String, trim: true },
+    foreignRegistration: { type: String, trim: true },
+    footnote: { type: String },
+    paymentDetails: { type: String },
     currency: { type: String, default: "INR" },
     settings: {
       leavePolicy: {

@@ -19,7 +19,7 @@ export async function GET(
   const invoice = await Invoice.findById(id)
     .populate("clientId", "name company email phone address")
     .populate("projectId", "name")
-    .populate("companyId", "name code currency address")
+    .populate("companyId", "name code currency address billingAddress logo gstNumber foreignRegistration footnote paymentDetails")
     .lean();
 
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });

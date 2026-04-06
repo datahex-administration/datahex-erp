@@ -28,16 +28,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, Play, Loader2, Search } from "lucide-react";
+import { Wallet, Play, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
 
+interface EmployeePreview {
+  _id: string;
+  name: string;
+  salary: number;
+  currency: string;
+  designation: string;
+}
+
 interface SalaryProcessingData {
   _id: string;
   month: number;
   year: number;
+  paymentType?: "full" | "partial";
   employees: Array<{
     employeeId: string;
     employeeName: string;
@@ -45,9 +54,12 @@ interface SalaryProcessingData {
     deductions: number;
     bonus: number;
     netSalary: number;
+    paidAmount?: number;
+    remainingAmount?: number;
     status: string;
   }>;
   totalAmount: number;
+  totalPaid?: number;
   currency: string;
   processedBy?: { name: string };
   processedAt: string;
@@ -70,6 +82,13 @@ export default function SalaryPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  // Partial salary state
+  const [paymentType, setPaymentType] = useState<"full" | "partial">("full");
+  const [employees, setEmployees] = useState<EmployeePreview[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [adjustments, setAdjustments] = useState<Record<string, { deductions: string; bonus: string }>>({});
+  const [partialAmounts, setPartialAmounts] = useState<Record<string, string>>({});
+
   const fetchProcessings = useCallback(async () => {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -88,12 +107,78 @@ export default function SalaryPage() {
     fetchProcessings();
   }, [fetchProcessings]);
 
+  // Fetch employees when dialog opens
+  const fetchEmployees = async () => {
+    setLoadingEmployees(true);
+    try {
+      const res = await fetch("/api/employees?limit=200&status=active");
+      if (res.ok) {
+        const json = await res.json();
+        const data = json.data ?? (Array.isArray(json) ? json : []);
+        setEmployees(data);
+        const adj: Record<string, { deductions: string; bonus: string }> = {};
+        const partial: Record<string, string> = {};
+        data.forEach((emp: EmployeePreview) => {
+          adj[emp._id] = { deductions: "0", bonus: "0" };
+          partial[emp._id] = String(emp.salary);
+        });
+        setAdjustments(adj);
+        setPartialAmounts(partial);
+      }
+    } catch {
+      toast.error("Failed to load employees");
+    }
+    setLoadingEmployees(false);
+  };
+
+  const handleDialogOpen = (open: boolean) => {
+    setProcessDialogOpen(open);
+    if (open) {
+      setPaymentType("full");
+      fetchEmployees();
+    }
+  };
+
+  const getNetSalary = (emp: EmployeePreview) => {
+    const adj = adjustments[emp._id] || { deductions: "0", bonus: "0" };
+    return emp.salary - (Number(adj.deductions) || 0) + (Number(adj.bonus) || 0);
+  };
+
+  const getTotalNet = () => employees.reduce((sum, emp) => sum + getNetSalary(emp), 0);
+
+  const getTotalPaying = () => {
+    if (paymentType === "full") return getTotalNet();
+    return employees.reduce((sum, emp) => {
+      const net = getNetSalary(emp);
+      const paying = Math.min(Number(partialAmounts[emp._id]) || 0, net);
+      return sum + paying;
+    }, 0);
+  };
+
   const handleProcess = async () => {
     setProcessing(true);
+    const body: Record<string, unknown> = {
+      month: selectedMonth,
+      year: selectedYear,
+      paymentType,
+      adjustments: Object.fromEntries(
+        Object.entries(adjustments).map(([id, adj]) => [
+          id,
+          { deductions: Number(adj.deductions) || 0, bonus: Number(adj.bonus) || 0 },
+        ])
+      ),
+    };
+
+    if (paymentType === "partial") {
+      body.partialAmounts = Object.fromEntries(
+        Object.entries(partialAmounts).map(([id, amount]) => [id, Number(amount) || 0])
+      );
+    }
+
     const res = await fetch("/api/salary/process", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {
@@ -107,6 +192,17 @@ export default function SalaryPage() {
     setProcessing(false);
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "paid":
+        return <Badge className="bg-green-100 text-green-800 border-0">Paid</Badge>;
+      case "partially_paid":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-0">Partial</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 border-0">Pending</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -115,49 +211,199 @@ export default function SalaryPage() {
           <p className="text-muted-foreground mt-1">{total} record{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
-        <ExportButton data={processings.flatMap(p => p.employees.map(emp => ({ month: `${MONTHS[p.month-1]} ${p.year}`, ...emp, currency: p.currency })))} columns={[{ key: "month", label: "Month" }, { key: "employeeName", label: "Employee" }, { key: "baseSalary", label: "Base" }, { key: "deductions", label: "Deductions" }, { key: "bonus", label: "Bonus" }, { key: "netSalary", label: "Net" }, { key: "currency", label: "Currency" }]} filename="salary" />
-        <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-          <DialogTrigger
-            render={<Button><Play className="mr-2 h-4 w-4" /> Process Salary</Button>}
+          <ExportButton
+            data={processings.flatMap((p) =>
+              p.employees.map((emp) => ({
+                month: `${MONTHS[p.month - 1]} ${p.year}`,
+                ...emp,
+                paidAmount: emp.paidAmount ?? emp.netSalary,
+                remainingAmount: emp.remainingAmount ?? 0,
+                currency: p.currency,
+              }))
+            )}
+            columns={[
+              { key: "month", label: "Month" },
+              { key: "employeeName", label: "Employee" },
+              { key: "baseSalary", label: "Base" },
+              { key: "deductions", label: "Deductions" },
+              { key: "bonus", label: "Bonus" },
+              { key: "netSalary", label: "Net" },
+              { key: "paidAmount", label: "Paid" },
+              { key: "remainingAmount", label: "Remaining" },
+              { key: "currency", label: "Currency" },
+              { key: "status", label: "Status" },
+            ]}
+            filename="salary"
           />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Process Monthly Salary</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Month</Label>
-                  <Select value={selectedMonth} onValueChange={(v) => v && setSelectedMonth(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {MONTHS.map((m, i) => (
-                        <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <Dialog open={processDialogOpen} onOpenChange={handleDialogOpen}>
+            <DialogTrigger
+              render={<Button><Play className="mr-2 h-4 w-4" /> Process Salary</Button>}
+            />
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Process Monthly Salary</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5">
+                {/* Month, Year, Payment Type */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Month</Label>
+                    <Select value={selectedMonth} onValueChange={(v) => v && setSelectedMonth(v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {MONTHS.map((m, i) => (
+                          <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Year</Label>
+                    <Input
+                      type="number"
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      min={2020}
+                      max={2035}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Payment Type</Label>
+                    <Select value={paymentType} onValueChange={(v) => v && setPaymentType(v as "full" | "partial")}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">Full Salary</SelectItem>
+                        <SelectItem value="partial">Partial Salary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Year</Label>
-                  <Input
-                    type="number"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    min={2020}
-                    max={2030}
-                  />
-                </div>
+
+                {/* Employee breakdown with deductions */}
+                {loadingEmployees ? (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : employees.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No active employees found</p>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead className="text-right">Base Salary</TableHead>
+                          <TableHead className="text-right w-[100px]">Deductions</TableHead>
+                          <TableHead className="text-right w-[100px]">Bonus</TableHead>
+                          <TableHead className="text-right">Net</TableHead>
+                          {paymentType === "partial" && (
+                            <TableHead className="text-right w-[120px]">Pay Now</TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {employees.map((emp) => {
+                          const adj = adjustments[emp._id] || { deductions: "0", bonus: "0" };
+                          const net = getNetSalary(emp);
+                          return (
+                            <TableRow key={emp._id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium text-sm">{emp.name}</p>
+                                  <p className="text-xs text-muted-foreground">{emp.designation}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {emp.salary.toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={adj.deductions}
+                                  onChange={(e) =>
+                                    setAdjustments((prev) => ({
+                                      ...prev,
+                                      [emp._id]: { ...prev[emp._id], deductions: e.target.value },
+                                    }))
+                                  }
+                                  className="h-8 w-[90px] text-right text-sm ml-auto"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={adj.bonus}
+                                  onChange={(e) =>
+                                    setAdjustments((prev) => ({
+                                      ...prev,
+                                      [emp._id]: { ...prev[emp._id], bonus: e.target.value },
+                                    }))
+                                  }
+                                  className="h-8 w-[90px] text-right text-sm ml-auto"
+                                />
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {net.toLocaleString()}
+                              </TableCell>
+                              {paymentType === "partial" && (
+                                <TableCell className="text-right">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max={net}
+                                    value={partialAmounts[emp._id] || ""}
+                                    onChange={(e) =>
+                                      setPartialAmounts((prev) => ({
+                                        ...prev,
+                                        [emp._id]: e.target.value,
+                                      }))
+                                    }
+                                    className="h-8 w-[110px] text-right text-sm ml-auto"
+                                  />
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {employees.length > 0 && (
+                  <div className="flex items-center justify-between rounded-lg bg-accent/50 p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        {employees.length} employee{employees.length !== 1 ? "s" : ""}
+                      </p>
+                      <p className="text-sm">
+                        Total Net: <span className="font-bold">{getTotalNet().toLocaleString()}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">
+                        {paymentType === "partial" ? "Paying Now" : "Total"}
+                      </p>
+                      <p className="text-xl font-bold">{getTotalPaying().toLocaleString()}</p>
+                      {paymentType === "partial" && getTotalNet() > getTotalPaying() && (
+                        <p className="text-xs text-muted-foreground">
+                          Remaining: {(getTotalNet() - getTotalPaying()).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <Button onClick={handleProcess} className="w-full" disabled={processing || employees.length === 0}>
+                  {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Process {paymentType === "partial" ? "Partial " : ""}Salary for {MONTHS[Number(selectedMonth) - 1]} {selectedYear}
+                </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                This will calculate salary for all active employees and create an expense entry.
-              </p>
-              <Button onClick={handleProcess} className="w-full" disabled={processing}>
-                {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Process Salary for {MONTHS[Number(selectedMonth) - 1]} {selectedYear}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -174,59 +420,74 @@ export default function SalaryPage() {
             <p className="text-muted-foreground py-8 text-center">No salary processed yet</p>
           ) : (
             <>
-            <div className="space-y-4">
-              {processings.map((p) => (
-                <div key={p._id} className="border rounded-lg">
-                  <div
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50"
-                    onClick={() => setExpandedId(expandedId === p._id ? null : p._id)}
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {MONTHS[p.month - 1]} {p.year}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {p.employees.length} employees • Processed {format(new Date(p.processedAt), "dd MMM yyyy")}
-                      </p>
+              <div className="space-y-4">
+                {processings.map((p) => (
+                  <div key={p._id} className="border rounded-lg">
+                    <div
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/50"
+                      onClick={() => setExpandedId(expandedId === p._id ? null : p._id)}
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{MONTHS[p.month - 1]} {p.year}</p>
+                          {p.paymentType === "partial" && (
+                            <Badge className="bg-yellow-100 text-yellow-800 border-0 text-xs">Partial</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {p.employees.length} employees • Processed {format(new Date(p.processedAt), "dd MMM yyyy")}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">
+                          {p.currency} {(p.totalPaid ?? p.totalAmount).toLocaleString()}
+                        </p>
+                        {p.paymentType === "partial" && p.totalPaid !== undefined && p.totalPaid < p.totalAmount && (
+                          <p className="text-xs text-muted-foreground">of {p.totalAmount.toLocaleString()} total</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">
-                        {p.currency} {p.totalAmount.toLocaleString()}
-                      </p>
-                      <Badge variant="default">Processed</Badge>
-                    </div>
-                  </div>
-                  {expandedId === p._id && (
-                    <div className="border-t px-4 pb-4">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Employee</TableHead>
-                            <TableHead className="text-right">Base</TableHead>
-                            <TableHead className="text-right">Deductions</TableHead>
-                            <TableHead className="text-right">Bonus</TableHead>
-                            <TableHead className="text-right">Net</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {p.employees.map((emp) => (
-                            <TableRow key={emp.employeeId}>
-                              <TableCell>{emp.employeeName}</TableCell>
-                              <TableCell className="text-right">{emp.baseSalary.toLocaleString()}</TableCell>
-                              <TableCell className="text-right text-destructive">{emp.deductions.toLocaleString()}</TableCell>
-                              <TableCell className="text-right text-green-600">{emp.bonus.toLocaleString()}</TableCell>
-                              <TableCell className="text-right font-medium">{emp.netSalary.toLocaleString()}</TableCell>
+                    {expandedId === p._id && (
+                      <div className="border-t px-4 pb-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Employee</TableHead>
+                              <TableHead className="text-right">Base</TableHead>
+                              <TableHead className="text-right">Deductions</TableHead>
+                              <TableHead className="text-right">Bonus</TableHead>
+                              <TableHead className="text-right">Net</TableHead>
+                              <TableHead className="text-right">Paid</TableHead>
+                              <TableHead className="text-right">Status</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
-          </>
+                          </TableHeader>
+                          <TableBody>
+                            {p.employees.map((emp) => (
+                              <TableRow key={emp.employeeId}>
+                                <TableCell>{emp.employeeName}</TableCell>
+                                <TableCell className="text-right">{emp.baseSalary.toLocaleString()}</TableCell>
+                                <TableCell className="text-right text-destructive">
+                                  {emp.deductions > 0 ? `-${emp.deductions.toLocaleString()}` : "0"}
+                                </TableCell>
+                                <TableCell className="text-right text-green-600">
+                                  {emp.bonus > 0 ? `+${emp.bonus.toLocaleString()}` : "0"}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">{emp.netSalary.toLocaleString()}</TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {(emp.paidAmount ?? emp.netSalary).toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-right">{getStatusBadge(emp.status)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+            </>
           )}
         </CardContent>
       </Card>

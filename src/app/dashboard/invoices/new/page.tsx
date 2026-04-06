@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CurrencySelect } from "@/components/forms/currency-select";
@@ -126,25 +127,30 @@ export default function NewInvoicePage() {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Client *</Label>
-              <Select value={form.clientId} onValueChange={(v) => v && setForm({ ...form, clientId: v })}>
-                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-                <SelectContent>
-                  {clients.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>{c.name}{c.company ? ` (${c.company})` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={clients.map((c) => ({
+                  value: c._id,
+                  label: c.name + (c.company ? ` (${c.company})` : ""),
+                }))}
+                value={form.clientId}
+                onValueChange={(v) => setForm({ ...form, clientId: v, projectId: "" })}
+                placeholder="Select client"
+                searchPlaceholder="Search clients..."
+              />
             </div>
             <div className="space-y-2">
               <Label>Project (optional)</Label>
-              <Select value={form.projectId} onValueChange={(v) => v && setForm({ ...form, projectId: v })}>
-                <SelectTrigger><SelectValue placeholder="Link to project" /></SelectTrigger>
-                <SelectContent>
-                  {clientProjects.map((p) => (
-                    <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={clientProjects.map((p) => ({
+                  value: p._id,
+                  label: p.name,
+                }))}
+                value={form.projectId}
+                onValueChange={(v) => setForm({ ...form, projectId: v })}
+                placeholder="Link to project"
+                searchPlaceholder="Search projects..."
+                emptyText="No projects found"
+              />
             </div>
             <div className="space-y-2">
               <Label>Type</Label>

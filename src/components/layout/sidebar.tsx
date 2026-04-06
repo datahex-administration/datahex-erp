@@ -11,12 +11,23 @@ import {
   ChevronDown,
   ChevronLeft,
   X,
+  KeyRound,
+  Clock,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { useEffect, useMemo, useState } from "react";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
@@ -179,7 +190,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-3 py-4">
+      <ScrollArea className="flex-1 min-h-0 px-3 py-4">
         {desktopCollapsed ? (
           <nav className="space-y-4">
             {visibleGroups.map((group) => (
@@ -281,35 +292,106 @@ export function Sidebar({
       </ScrollArea>
 
       <div className="border-t px-3 py-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/70 px-3 py-3 backdrop-blur-xl">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarFallback className="text-xs font-medium">{userInitials}</AvatarFallback>
-          </Avatar>
-          {!desktopCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user?.name}</p>
-              <p className="truncate text-xs capitalize text-muted-foreground">
-                {user?.role?.replace("_", " ")}
-              </p>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card/70 px-3 py-3 backdrop-blur-xl transition-colors hover:bg-accent/60"
+              >
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarFallback className="text-xs font-medium">{userInitials}</AvatarFallback>
+                </Avatar>
+                {!desktopCollapsed && (
+                  <>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-medium">{user?.name}</p>
+                      <p className="truncate text-xs capitalize text-muted-foreground">
+                        {user?.role?.replace("_", " ")}
+                      </p>
+                    </div>
+                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </>
+                )}
+              </button>
+            }
+          />
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            sideOffset={8}
+            className="w-72 rounded-2xl p-0"
+          >
+            {/* User info header */}
+            <div className="border-b px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-11 w-11 shrink-0">
+                  <AvatarFallback className="text-sm font-semibold">{userInitials}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{user?.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="mt-0.5 truncate text-xs font-medium capitalize text-primary">
+                    {company?.name || "Workspace"} · {user?.role?.replace("_", " ")}
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={logout}
-                  title="Logout"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              }
-            />
-            <TooltipContent side={desktopCollapsed ? "right" : "top"}>Logout</TooltipContent>
-          </Tooltip>
-        </div>
+
+            {/* Last login */}
+            {user?.lastLogin && (
+              <>
+                <div className="flex items-center gap-2.5 px-4 py-2.5 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Last login:{" "}
+                    {new Date(user.lastLogin).toLocaleString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
+            {/* Actions */}
+            <div className="p-1">
+              <DropdownMenuItem
+                className="gap-2.5 rounded-xl px-3 py-2.5 cursor-pointer"
+                onSelect={async () => {
+                  try {
+                    const res = await fetch(`/api/users/${user?._id || user?.id}/reset-pin`, {
+                      method: "POST",
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      alert(data.message || "New PIN sent successfully.");
+                    } else {
+                      alert(data.error || "PIN reset failed. Contact your administrator.");
+                    }
+                  } catch {
+                    alert("PIN reset failed. Please try again.");
+                  }
+                }}
+              >
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                <span>Reset PIN</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                className="gap-2.5 rounded-xl px-3 py-2.5 cursor-pointer"
+                onSelect={logout}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   );
