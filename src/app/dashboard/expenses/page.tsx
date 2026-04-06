@@ -221,7 +221,7 @@ export default function ExpensesPage() {
           ]} filename="expenses" />
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Expense</Button>} />
-            <DialogContent className="max-w-lg">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader><DialogTitle>Record Expense</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-2">
                 {/* Date and Amount first */}
@@ -287,7 +287,7 @@ export default function ExpensesPage() {
                 {/* Project link */}
                 <div className="space-y-2">
                   <Label>Project (optional)</Label>
-                  <Select value={form.projectId || "__none__"} onValueChange={(v) => setForm({ ...form, projectId: v === "__none__" ? "" : v })}>
+                  <Select value={form.projectId || "__none__"} onValueChange={(v) => setForm({ ...form, projectId: v === "__none__" ? "" : v ?? "" })}>
                     <SelectTrigger><SelectValue placeholder="Link to project" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">No project</SelectItem>

@@ -632,7 +632,7 @@ function ProposalsTab({
         <h2 className="text-lg font-semibold">Proposals</h2>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button size="sm"><Plus className="h-4 w-4 mr-1" />New Proposal</Button>} />
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create Proposal</DialogTitle>
             </DialogHeader>
