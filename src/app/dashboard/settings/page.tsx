@@ -205,66 +205,68 @@ export default function SettingsPage() {
           <DialogTrigger
             render={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add User</Button>}
           />
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>{editing ? "Edit User" : "Add User"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Full Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                  disabled={!!editing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>WhatsApp Number</Label>
-                <Input
-                  value={form.whatsappNumber}
-                  onChange={(e) => setForm({ ...form, whatsappNumber: e.target.value })}
-                  placeholder="+919876543210"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{editing ? "New PIN (leave blank to keep)" : "6-Digit PIN"}</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  pattern="\d{6}"
-                  value={form.pin}
-                  onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
-                  placeholder="123456"
-                  required={!editing}
-                />
-              </div>
-              {currentUser?.role === "super_admin" && (
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Role</Label>
-                  <Select value={form.role} onValueChange={(v) => v && setForm({ ...form, role: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="super_admin">Super Admin</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Full Name</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    required
+                    disabled={!!editing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>WhatsApp Number</Label>
+                  <Input
+                    value={form.whatsappNumber}
+                    onChange={(e) => setForm({ ...form, whatsappNumber: e.target.value })}
+                    placeholder="+919876543210"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{editing ? "New PIN (leave blank to keep)" : "6-Digit PIN"}</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    pattern="\d{6}"
+                    value={form.pin}
+                    onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
+                    placeholder="123456"
+                    required={!editing}
+                  />
+                </div>
+                {currentUser?.role === "super_admin" && (
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Role</Label>
+                    <Select value={form.role} onValueChange={(v) => v && setForm({ ...form, role: v })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
               <Button type="submit" className="w-full">
                 {editing ? "Update" : "Create"} User
               </Button>

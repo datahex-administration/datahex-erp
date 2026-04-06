@@ -151,7 +151,7 @@ export default function CompaniesPage() {
           <ExportButton data={companies} columns={EXPORT_COLUMNS} filename="companies" />
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger render={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Company</Button>} />
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit Company" : "Add Company"}</DialogTitle>
                 <DialogDescription>
@@ -159,23 +159,33 @@ export default function CompaniesPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Company Name</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Datahex Technologies" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Code</Label>
-                  <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="DTX" maxLength={10} required disabled={!!editing} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Office address" rows={2} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Billing Address</Label>
-                  <Textarea value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} placeholder="Billing address (shown on invoices)" rows={2} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Company Name</Label>
+                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Datahex Technologies" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Code</Label>
+                      <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="DTX" maxLength={10} required disabled={!!editing} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Default Currency</Label>
+                      <CurrencySelect
+                        value={form.currency}
+                        onValueChange={(value) => setForm({ ...form, currency: value })}
+                        triggerClassName="w-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Address</Label>
+                    <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Office address" rows={2} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Billing Address</Label>
+                    <Textarea value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} placeholder="Billing address (shown on invoices)" rows={2} />
+                  </div>
                   <div className="space-y-2">
                     <Label>GST Number</Label>
                     <Input value={form.gstNumber} onChange={(e) => setForm({ ...form, gstNumber: e.target.value })} placeholder="22AAAAA0000A1Z5" />
@@ -184,22 +194,14 @@ export default function CompaniesPage() {
                     <Label>Foreign Registration</Label>
                     <Input value={form.foreignRegistration} onChange={(e) => setForm({ ...form, foreignRegistration: e.target.value })} placeholder="Tax ID / VAT number" />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Payment Details</Label>
-                  <Textarea value={form.paymentDetails} onChange={(e) => setForm({ ...form, paymentDetails: e.target.value })} placeholder="Bank name, A/C number, IFSC, UPI ID..." rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Invoice Footnote</Label>
-                  <Textarea value={form.footnote} onChange={(e) => setForm({ ...form, footnote: e.target.value })} placeholder="Terms, thank you note, etc." rows={2} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Default Currency</Label>
-                  <CurrencySelect
-                    value={form.currency}
-                    onValueChange={(value) => setForm({ ...form, currency: value })}
-                    triggerClassName="w-full"
-                  />
+                  <div className="space-y-2">
+                    <Label>Payment Details</Label>
+                    <Textarea value={form.paymentDetails} onChange={(e) => setForm({ ...form, paymentDetails: e.target.value })} placeholder="Bank name, A/C number, IFSC, UPI ID..." rows={2} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Invoice Footnote</Label>
+                    <Textarea value={form.footnote} onChange={(e) => setForm({ ...form, footnote: e.target.value })} placeholder="Terms, thank you note, etc." rows={2} />
+                  </div>
                 </div>
                 <DialogFooter className="px-0 pb-0">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

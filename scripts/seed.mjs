@@ -57,9 +57,45 @@ const EmployeeSchema = new mongoose.Schema({
   status: { type: String, enum: ["active", "resigned", "terminated", "intern_completed"], default: "active" },
 }, { timestamps: true });
 
+const ClientSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: String,
+  company: String,
+  contactPersonName: String,
+  address: String,
+  additionalDetails: String,
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
+
+const ProjectSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
+  clientId: { type: mongoose.Schema.Types.ObjectId, ref: "Client", required: true },
+  name: { type: String, required: true },
+  description: String,
+  status: { type: String, enum: ["requirement", "proposal", "in_progress", "review", "completed", "maintenance"], default: "requirement" },
+  startDate: Date,
+  deadline: Date,
+  managerId: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
+  managerUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  team: [{ type: mongoose.Schema.Types.ObjectId, ref: "Employee" }],
+  budget: Number,
+  currency: { type: String, default: "INR" },
+  stages: [{
+    name: { type: String, required: true },
+    status: { type: String, enum: ["pending", "in_progress", "completed"], default: "pending" },
+    startDate: Date,
+    endDate: Date,
+    notes: String,
+  }],
+}, { timestamps: true });
+
 const Company = mongoose.models.Company || mongoose.model("Company", CompanySchema);
 const User = mongoose.models.User || mongoose.model("User", UserSchema);
 const Employee = mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema);
+const Client = mongoose.models.Client || mongoose.model("Client", ClientSchema);
+const Project = mongoose.models.Project || mongoose.model("Project", ProjectSchema);
 
 async function seed() {
   console.log("🔗 Connecting to MongoDB...");
@@ -70,6 +106,8 @@ async function seed() {
   await Company.deleteMany({});
   await User.deleteMany({});
   await Employee.deleteMany({});
+  await Client.deleteMany({});
+  await Project.deleteMany({});
   console.log("🗑️  Cleared existing data\n");
 
   // Create companies
@@ -210,6 +248,88 @@ async function seed() {
   ]);
 
   console.log(`👨‍💻 Created ${employees.length} employees\n`);
+
+  // Create clients
+  const client1 = await Client.create({
+    name: "TechCorp Solutions",
+    email: "contact@techcorp.com",
+    phone: "+91 9876543210",
+    company: "TechCorp Solutions Pvt Ltd",
+    contactPersonName: "Rahul Sharma",
+    address: "Bangalore, Karnataka",
+    companyId: datahex._id,
+  });
+
+  const client2 = await Client.create({
+    name: "Gulf Trading LLC",
+    email: "info@gulftrading.bh",
+    phone: "+973 1234 5678",
+    company: "Gulf Trading LLC",
+    contactPersonName: "Ahmed Ali",
+    address: "Manama, Bahrain",
+    companyId: bahrain._id,
+  });
+
+  console.log(`🤝 Created ${2} clients\n`);
+
+  // Create projects
+  const projects = await Project.insertMany([
+    {
+      companyId: datahex._id,
+      clientId: client1._id,
+      name: "E-Commerce Platform",
+      description: "Full-stack e-commerce solution with payment integration",
+      status: "in_progress",
+      startDate: new Date("2026-01-15"),
+      deadline: new Date("2026-06-30"),
+      managerUserId: manager._id,
+      budget: 500000,
+      currency: "INR",
+      stages: [
+        { name: "Requirements", status: "completed" },
+        { name: "Design", status: "completed" },
+        { name: "Development", status: "in_progress" },
+        { name: "Testing", status: "pending" },
+        { name: "Deployment", status: "pending" },
+      ],
+    },
+    {
+      companyId: datahex._id,
+      clientId: client1._id,
+      name: "Mobile App Development",
+      description: "Cross-platform mobile app for inventory management",
+      status: "requirement",
+      startDate: new Date("2026-03-01"),
+      deadline: new Date("2026-09-30"),
+      managerUserId: manager._id,
+      budget: 300000,
+      currency: "INR",
+      stages: [
+        { name: "Requirements", status: "in_progress" },
+        { name: "UI/UX Design", status: "pending" },
+        { name: "Development", status: "pending" },
+        { name: "Testing", status: "pending" },
+      ],
+    },
+    {
+      companyId: bahrain._id,
+      clientId: client2._id,
+      name: "CRM System",
+      description: "Custom CRM for Gulf Trading operations",
+      status: "proposal",
+      startDate: new Date("2026-04-01"),
+      deadline: new Date("2026-12-31"),
+      budget: 5000,
+      currency: "BHD",
+      stages: [
+        { name: "Proposal", status: "in_progress" },
+        { name: "Development", status: "pending" },
+        { name: "Deployment", status: "pending" },
+      ],
+    },
+  ]);
+
+  console.log(`📁 Created ${projects.length} projects\n`);
 
   console.log("✅ Seed completed successfully!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

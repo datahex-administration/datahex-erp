@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "Datahex ERP";
@@ -369,12 +370,12 @@ export function Sidebar({
                     });
                     const data = await res.json();
                     if (res.ok) {
-                      alert(data.message || "New PIN sent successfully.");
+                      toast.success(data.message || "New PIN sent successfully.");
                     } else {
-                      alert(data.error || "PIN reset failed. Contact your administrator.");
+                      toast.error(data.error || "PIN reset failed. Contact your administrator.");
                     }
                   } catch {
-                    alert("PIN reset failed. Please try again.");
+                    toast.error("PIN reset failed. Please try again.");
                   }
                 }}
               >

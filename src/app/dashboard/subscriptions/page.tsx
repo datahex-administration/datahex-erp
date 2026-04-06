@@ -215,7 +215,7 @@ export default function SubscriptionsPage() {
           <ExportButton data={subs} columns={EXPORT_COLUMNS} filename="subscriptions" />
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Subscription</Button>} />
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader><DialogTitle>Add Subscription</DialogTitle></DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="grid gap-4 sm:grid-cols-2">

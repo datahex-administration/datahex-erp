@@ -31,7 +31,6 @@ import {
   TrendingDown,
   DollarSign,
   Clock,
-  Filter,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,6 +38,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
 import { CurrencySelect } from "@/components/forms/currency-select";
 import { extractCollectionData } from "@/lib/form-options";
+import { useAuth } from "@/components/providers/auth-provider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -71,6 +71,9 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
+  const { company } = useAuth();
+  const defaultCurrency = company?.currency || "INR";
+
   const [expenses, setExpenses] = useState<AnyObj[]>([]);
   const [projects, setProjects] = useState<AnyObj[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,13 +90,20 @@ export default function ExpensesPage() {
     category: "",
     description: "",
     amount: "",
-    currency: "INR",
+    currency: defaultCurrency,
     date: format(new Date(), "yyyy-MM-dd"),
     projectId: "",
     type: "general",
     isRecurring: false,
     frequency: "monthly",
   });
+
+  // Update currency default when company loads
+  useEffect(() => {
+    if (defaultCurrency) {
+      setForm((prev) => ({ ...prev, currency: defaultCurrency }));
+    }
+  }, [defaultCurrency]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -115,6 +125,20 @@ export default function ExpensesPage() {
   }, [page, search, typeFilter, statusFilter]);
 
   useEffect(() => { setPage(1); }, [search, typeFilter, statusFilter]);
+
+  const resetForm = () => {
+    setForm({
+      category: "",
+      description: "",
+      amount: "",
+      currency: defaultCurrency,
+      date: format(new Date(), "yyyy-MM-dd"),
+      projectId: "",
+      type: "general",
+      isRecurring: false,
+      frequency: "monthly",
+    });
+  };
 
   const handleCreate = async () => {
     setSaving(true);
@@ -138,7 +162,7 @@ export default function ExpensesPage() {
     });
     if (res.ok) {
       setDialogOpen(false);
-      setForm({ category: "", description: "", amount: "", currency: "INR", date: format(new Date(), "yyyy-MM-dd"), projectId: "", type: "general", isRecurring: false, frequency: "monthly" });
+      resetForm();
       toast.success("Expense recorded");
       setPage(1);
     } else {
@@ -195,65 +219,87 @@ export default function ExpensesPage() {
             { key: "date", label: "Date" },
             { key: "status", label: "Status" },
           ]} filename="expenses" />
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Expense</Button>} />
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Record Expense</DialogTitle></DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Category *</Label>
-                  <Select value={form.category} onValueChange={(v) => v && setForm({ ...form, category: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Expense</Button>} />
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>Record Expense</DialogTitle></DialogHeader>
+              <div className="space-y-4 mt-2">
+                {/* Date and Amount first */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Date *</Label>
+                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount *</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={form.amount}
+                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                        className="flex-1 min-w-0"
+                      />
+                      <CurrencySelect
+                        value={form.currency}
+                        onValueChange={(value) => setForm({ ...form, currency: value })}
+                        triggerClassName="w-[100px] shrink-0"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={form.type} onValueChange={(v) => v && setForm({ ...form, type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="salary">Salary</SelectItem>
-                      <SelectItem value="subscription">Subscription</SelectItem>
-                      <SelectItem value="operational">Operational</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                {/* Category and Type */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Category *</Label>
+                    <Select value={form.category} onValueChange={(v) => v && setForm({ ...form, category: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={form.type} onValueChange={(v) => v && setForm({ ...form, type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="salary">Salary</SelectItem>
+                        <SelectItem value="subscription">Subscription</SelectItem>
+                        <SelectItem value="operational">Operational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2 sm:col-span-2">
+
+                {/* Description */}
+                <div className="space-y-2">
                   <Label>Description *</Label>
                   <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Expense description" rows={2} />
                 </div>
+
+                {/* Project link */}
                 <div className="space-y-2">
-                  <Label>Amount *</Label>
-                  <div className="flex gap-2">
-                    <Input type="number" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="flex-1" />
-                    <CurrencySelect
-                      value={form.currency}
-                      onValueChange={(value) => setForm({ ...form, currency: value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Date *</Label>
-                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
                   <Label>Project (optional)</Label>
-                  <Select value={form.projectId} onValueChange={(v) => v && setForm({ ...form, projectId: v })}>
+                  <Select value={form.projectId || "__none__"} onValueChange={(v) => setForm({ ...form, projectId: v === "__none__" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="Link to project" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none__">No project</SelectItem>
                       {projects.map((p) => (
                         <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="sm:col-span-2 flex items-center gap-4">
+
+                {/* Recurring */}
+                <div className="flex items-center gap-4">
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -273,14 +319,14 @@ export default function ExpensesPage() {
                     </Select>
                   )}
                 </div>
+
+                <Button onClick={handleCreate} disabled={saving || !form.category || !form.description || !form.amount} className="w-full">
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Record Expense
+                </Button>
               </div>
-              <Button onClick={handleCreate} disabled={saving || !form.category || !form.description || !form.amount} className="w-full">
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Record Expense
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -292,7 +338,7 @@ export default function ExpensesPage() {
               <div className="p-2 rounded-lg bg-red-100"><TrendingDown className="h-5 w-5 text-red-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground">This Month</p>
-                <p className="text-lg font-bold">{thisMonth.toLocaleString()}</p>
+                <p className="text-lg font-bold">{defaultCurrency} {thisMonth.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -303,7 +349,7 @@ export default function ExpensesPage() {
               <div className="p-2 rounded-lg bg-green-100"><DollarSign className="h-5 w-5 text-green-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground">Total Approved</p>
-                <p className="text-lg font-bold">{totalApproved.toLocaleString()}</p>
+                <p className="text-lg font-bold">{defaultCurrency} {totalApproved.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -314,7 +360,7 @@ export default function ExpensesPage() {
               <div className="p-2 rounded-lg bg-yellow-100"><Clock className="h-5 w-5 text-yellow-600" /></div>
               <div>
                 <p className="text-xs text-muted-foreground">Pending Approval</p>
-                <p className="text-lg font-bold">{totalPending.toLocaleString()}</p>
+                <p className="text-lg font-bold">{defaultCurrency} {totalPending.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>

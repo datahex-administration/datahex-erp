@@ -239,7 +239,7 @@ export default function SalaryPage() {
             <DialogTrigger
               render={<Button><Play className="mr-2 h-4 w-4" /> Process Salary</Button>}
             />
-            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-3xl">
               <DialogHeader>
                 <DialogTitle>Process Monthly Salary</DialogTitle>
               </DialogHeader>
