@@ -313,7 +313,11 @@ export default function ExpensesPage() {
                 <div className="space-y-2">
                   <Label>Project (optional)</Label>
                   <Select value={form.projectId || "__none__"} onValueChange={(v) => setForm({ ...form, projectId: v === "__none__" ? "" : v ?? "" })}>
-                    <SelectTrigger><SelectValue placeholder="Link to project" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Link to project">
+                        {(() => { if (!form.projectId || form.projectId === "__none__") return "No project"; const p = projects.find(x => x._id === form.projectId); return p ? p.name : undefined; })()}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">No project</SelectItem>
                       {projects.map((p) => (

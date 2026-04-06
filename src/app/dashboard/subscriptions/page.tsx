@@ -305,7 +305,11 @@ export default function SubscriptionsPage() {
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Project (optional)</Label>
                   <Select value={form.projectId} onValueChange={(v) => v && setForm({ ...form, projectId: v })}>
-                    <SelectTrigger><SelectValue placeholder="Link to project" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Link to project">
+                        {(() => { const p = projects.find(x => x._id === form.projectId); return p ? p.name : undefined; })()}
+                      </SelectValue>
+                    </SelectTrigger>
                     <SelectContent>
                       {projects.map((p) => (
                         <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>

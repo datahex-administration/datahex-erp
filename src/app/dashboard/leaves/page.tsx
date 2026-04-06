@@ -372,7 +372,11 @@ export default function LeavesPage() {
           </Button>
         ))}
         <Select value={selectedEmployee} onValueChange={(v) => { if (v) { setSelectedEmployee(v); setPage(1); } }}>
-          <SelectTrigger className="w-[200px] ml-auto"><SelectValue placeholder="All employees" /></SelectTrigger>
+          <SelectTrigger className="w-[200px] ml-auto">
+            <SelectValue placeholder="All employees">
+              {(() => { if (selectedEmployee === "all") return "All Employees"; const e = employees.find(x => x._id === selectedEmployee); return e ? `${e.name} (${e.employeeId})` : undefined; })()}
+            </SelectValue>
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Employees</SelectItem>
             {employees.map((e) => (

@@ -337,7 +337,9 @@ export function ProjectFormDialog({
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select client" />
+                      <SelectValue placeholder="Select client">
+                        {(() => { const c = clients.find(x => x._id === form.clientId); return c ? `${c.name}${getClientSecondaryLabel(c) ? ` (${getClientSecondaryLabel(c)})` : ""}` : undefined; })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {clients.length === 0 ? (
@@ -389,7 +391,8 @@ export function ProjectFormDialog({
                   <Select
                     value={form.type || "__none__"}
                     onValueChange={(value) =>
-                      setForm((currentForm) => ({ ...currentForm, type: value === "__none__" ? "" : value }))
+                      setForm((currentForm) => ({ ...currentForm, type: value === "__none__" ? "" : value || "" }))
+            
                     }
                   >
                     <SelectTrigger className="w-full">
@@ -440,7 +443,9 @@ export function ProjectFormDialog({
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select project manager" />
+                      <SelectValue placeholder="Select project manager">
+                        {(() => { if (form.managerId === "" || form.managerId === "__none__") return "No project manager"; const m = managerOptions.find(x => x._id === form.managerId); return m ? `${m.name} (${m.designation || m.employeeId})` : undefined; })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">No project manager</SelectItem>

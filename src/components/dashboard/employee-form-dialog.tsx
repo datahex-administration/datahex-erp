@@ -363,7 +363,9 @@ export function EmployeeFormDialog({
                       }}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select company" />
+                        <SelectValue placeholder="Select company">
+                          {(() => { const c = companies.find(x => x._id === form.companyId); return c ? `${c.name} (${c.code})` : undefined; })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {companies.map((company) => (
