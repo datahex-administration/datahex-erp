@@ -5,6 +5,8 @@ import { isValidEmailAddress } from "@/lib/email";
 import Client from "@/models/Client";
 import Project from "@/models/Project";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

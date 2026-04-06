@@ -11,6 +11,8 @@ import {
 } from "@/lib/whatsapp";
 import Invoice from "@/models/Invoice";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

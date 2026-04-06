@@ -5,6 +5,8 @@ import { getEmailStatus } from "@/lib/email";
 import { getWhatsAppStatus } from "@/lib/whatsapp";
 import User from "@/models/User";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getSession();
   if (!session) {

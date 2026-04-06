@@ -5,6 +5,8 @@ import Leave from "@/models/Leave";
 import LeaveBalance from "@/models/LeaveBalance";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

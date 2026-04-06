@@ -4,6 +4,8 @@ import { verifyPin, createSession } from "@/lib/auth";
 import User from "@/models/User";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

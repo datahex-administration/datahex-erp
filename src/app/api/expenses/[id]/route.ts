@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import Expense from "@/models/Expense";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

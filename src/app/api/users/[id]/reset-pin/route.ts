@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import { issuePinReset } from "@/lib/pin-reset";
 import User from "@/models/User";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

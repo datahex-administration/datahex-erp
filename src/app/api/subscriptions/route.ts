@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import Subscription from "@/models/Subscription";
 import { encrypt, decrypt } from "@/lib/encryption";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

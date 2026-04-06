@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import Attendance from "@/models/Attendance";
 import User from "@/models/User";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) {

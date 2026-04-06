@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
 const CONNECTION_OPTIONS = {
   autoIndex: false,
   bufferCommands: false,
@@ -12,8 +11,12 @@ const CONNECTION_CHECK_TIMEOUT_MS = 2_000;
 
 let connectionPromise: Promise<typeof mongoose> | null = null;
 
-if (!MONGODB_URI) {
-  throw new Error("Please define MONGODB_URI in .env.local");
+function getMongoURI(): string {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("Please define MONGODB_URI in .env.local");
+  }
+  return uri;
 }
 
 async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, label: string) {
@@ -77,7 +80,7 @@ export async function connectDB() {
 
   if (!connectionPromise) {
     connectionPromise = withTimeout(
-      mongoose.connect(MONGODB_URI, CONNECTION_OPTIONS),
+      mongoose.connect(getMongoURI(), CONNECTION_OPTIONS),
       CONNECTION_OPTIONS.serverSelectionTimeoutMS,
       "mongoose connect"
     )

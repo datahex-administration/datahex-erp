@@ -5,6 +5,8 @@ import Employee from "@/models/Employee";
 import Company from "@/models/Company";
 import { logAudit } from "@/lib/audit";
 
+export const dynamic = "force-dynamic";
+
 async function generateEmployeeId(companyId: string): Promise<string> {
   const company = await Company.findById(companyId).lean();
   const code = company?.code || "EMP";

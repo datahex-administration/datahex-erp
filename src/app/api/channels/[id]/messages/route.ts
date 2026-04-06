@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import Message from "@/models/Message";
 import Channel from "@/models/Channel";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

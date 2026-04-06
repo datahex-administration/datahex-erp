@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import Subscription from "@/models/Subscription";
 import { encrypt, decrypt } from "@/lib/encryption";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

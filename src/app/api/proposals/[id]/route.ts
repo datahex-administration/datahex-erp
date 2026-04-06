@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Proposal from "@/models/Proposal";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

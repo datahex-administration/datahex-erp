@@ -10,6 +10,8 @@ import Company from "@/models/Company";
 import Subscription from "@/models/Subscription";
 import Client from "@/models/Client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getSession();
   if (!session) {

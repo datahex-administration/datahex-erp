@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import { isValidEmailAddress } from "@/lib/email";
 import Client from "@/models/Client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

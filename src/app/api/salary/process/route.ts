@@ -5,6 +5,8 @@ import SalaryProcessing from "@/models/SalaryProcessing";
 import Employee from "@/models/Employee";
 import Expense from "@/models/Expense";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

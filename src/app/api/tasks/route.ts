@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import DailyTask from "@/models/DailyTask";
 
+export const dynamic = "force-dynamic";
+
 function getDateRange(dateValue?: string | null) {
   const baseDate = dateValue ? new Date(dateValue) : new Date();
 

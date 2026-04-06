@@ -5,6 +5,8 @@ import { getRolePermissions, type RoleName } from "@/lib/permissions";
 import { normalizeWhatsAppRecipient } from "@/lib/whatsapp";
 import User from "@/models/User";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

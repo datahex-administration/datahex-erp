@@ -5,6 +5,8 @@ import { getRolePermissions, type RoleName } from "@/lib/permissions";
 import { normalizeWhatsAppRecipient } from "@/lib/whatsapp";
 import User from "@/models/User";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
