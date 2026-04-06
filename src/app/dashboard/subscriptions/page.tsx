@@ -39,12 +39,14 @@ import {
   Package,
   Trash2,
   Calendar,
+  Pencil,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
 import { CurrencySelect } from "@/components/forms/currency-select";
+import { useAuth } from "@/components/providers/auth-provider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -87,6 +89,7 @@ const EXPORT_COLUMNS = [
 ];
 
 export default function SubscriptionsPage() {
+  const { hasPermission } = useAuth();
   const [subs, setSubs] = useState<AnyObj[]>([]);
   const [projects, setProjects] = useState<AnyObj[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +98,7 @@ export default function SubscriptionsPage() {
   const [showCreds, setShowCreds] = useState<Record<string, boolean>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<AnyObj | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -137,16 +141,40 @@ export default function SubscriptionsPage() {
     return () => clearTimeout(timer);
   }, [search, typeFilter, page]);
 
-  const resetForm = () => setForm({
-    name: "", provider: "", type: "server", cost: "", currency: "USD",
-    frequency: "monthly", startDate: format(new Date(), "yyyy-MM-dd"),
-    renewalDate: "", autoRenew: true, credentials: "", projectId: "", notes: "",
-  });
+  const resetForm = () => {
+    setForm({
+      name: "", provider: "", type: "server", cost: "", currency: "USD",
+      frequency: "monthly", startDate: format(new Date(), "yyyy-MM-dd"),
+      renewalDate: "", autoRenew: true, credentials: "", projectId: "", notes: "",
+    });
+    setEditing(null);
+  };
 
-  const handleCreate = async () => {
+  const openEdit = (sub: AnyObj) => {
+    setEditing(sub);
+    setForm({
+      name: sub.name || "",
+      provider: sub.provider || "",
+      type: sub.type || "server",
+      cost: String(sub.cost || ""),
+      currency: sub.currency || "USD",
+      frequency: sub.frequency || "monthly",
+      startDate: sub.startDate ? format(new Date(sub.startDate), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+      renewalDate: sub.renewalDate ? format(new Date(sub.renewalDate), "yyyy-MM-dd") : "",
+      autoRenew: sub.autoRenew ?? true,
+      credentials: sub.credentials || "",
+      projectId: sub.projectId?._id || sub.projectId || "",
+      notes: sub.notes || "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
     setSaving(true);
-    const res = await fetch("/api/subscriptions", {
-      method: "POST",
+    const url = editing ? `/api/subscriptions/${editing._id}` : "/api/subscriptions";
+    const method = editing ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
@@ -158,13 +186,18 @@ export default function SubscriptionsPage() {
     });
     if (res.ok) {
       const sub = await res.json();
-      setSubs((prev) => [sub, ...prev]);
+      if (editing) {
+        setSubs((prev) => prev.map((s) => (s._id === sub._id ? sub : s)));
+        toast.success("Subscription updated");
+      } else {
+        setSubs((prev) => [sub, ...prev]);
+        toast.success("Subscription added");
+      }
       setDialogOpen(false);
       resetForm();
-      toast.success("Subscription added");
     } else {
       const data = await res.json();
-      toast.error(data.error || "Failed to add subscription");
+      toast.error(data.error || `Failed to ${editing ? "update" : "add"} subscription`);
     }
     setSaving(false);
   };
@@ -212,11 +245,14 @@ export default function SubscriptionsPage() {
           <p className="text-muted-foreground mt-1">{total} subscription{total !== 1 ? "s" : ""} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton data={subs} columns={EXPORT_COLUMNS} filename="subscriptions" />
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          {hasPermission("reports:export") && (
+            <ExportButton data={subs} columns={EXPORT_COLUMNS} filename="subscriptions" />
+          )}
+          {hasPermission("subscriptions:create") && (
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Subscription</Button>} />
           <DialogContent className="sm:max-w-lg">
-            <DialogHeader><DialogTitle>Add Subscription</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editing ? "Edit Subscription" : "Add Subscription"}</DialogTitle></DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
@@ -292,13 +328,14 @@ export default function SubscriptionsPage() {
                   </label>
                 </div>
               </div>
-              <Button onClick={handleCreate} disabled={saving || !form.name || !form.provider || !form.cost || !form.renewalDate} className="w-full">
+              <Button onClick={handleSubmit} disabled={saving || !form.name || !form.provider || !form.cost || !form.renewalDate} className="w-full">
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Add Subscription
+                {editing ? "Update Subscription" : "Add Subscription"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
+          )}
         </div>
       </div>
 
@@ -421,6 +458,12 @@ export default function SubscriptionsPage() {
                         <p className="text-xs text-muted-foreground">/{sub.frequency}</p>
                       </div>
                       <div className="flex gap-1">
+                        {hasPermission("subscriptions:update") && (
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(sub)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {hasPermission("subscriptions:update") && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -429,9 +472,12 @@ export default function SubscriptionsPage() {
                         >
                           {sub.status === "active" ? "Cancel" : "Activate"}
                         </Button>
+                        )}
+                        {hasPermission("subscriptions:delete") && (
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(sub._id)}>
                           <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
+                        )}
                       </div>
                     </div>
                   </div>

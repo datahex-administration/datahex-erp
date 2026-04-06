@@ -39,6 +39,7 @@ import {
 import { format } from "date-fns";
 import { ExportButton } from "@/components/ui/export-button";
 import { Pagination } from "@/components/ui/pagination";
+import { useAuth } from "@/components/providers/auth-provider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -75,6 +76,7 @@ const MODULES = [
 ];
 
 export default function AuditLogPage() {
+  const { hasPermission } = useAuth();
   const [data, setData] = useState<{ data: AnyObj[]; total: number; totalPages: number }>({ data: [], total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -110,7 +112,9 @@ export default function AuditLogPage() {
         <p className="text-muted-foreground mt-1">{data.total} action{data.total !== 1 ? "s" : ""} logged</p>
       </div>
 
-      <ExportButton data={data.data} columns={[{ key: "module", label: "Module" }, { key: "action", label: "Action" }, { key: "details", label: "Details" }, { key: "userId.name", label: "User" }, { key: "createdAt", label: "Date" }]} filename="audit-log" />
+      {hasPermission("reports:export") && (
+        <ExportButton data={data.data} columns={[{ key: "module", label: "Module" }, { key: "action", label: "Action" }, { key: "details", label: "Details" }, { key: "userId.name", label: "User" }, { key: "createdAt", label: "Date" }]} filename="audit-log" />
+      )}
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">

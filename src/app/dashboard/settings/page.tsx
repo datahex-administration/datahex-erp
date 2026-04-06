@@ -66,7 +66,7 @@ interface CommunicationStatus {
 }
 
 export default function SettingsPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -200,7 +200,10 @@ export default function SettingsPage() {
           <p className="text-muted-foreground mt-1">{total} user{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton data={users} columns={[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "role", label: "Role" }, { key: "isActive", label: "Active" }]} filename="users" />
+          {hasPermission("reports:export") && (
+            <ExportButton data={users} columns={[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "role", label: "Role" }, { key: "isActive", label: "Active" }]} filename="users" />
+          )}
+        {hasPermission("users:create") && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add User</Button>}
@@ -273,6 +276,7 @@ export default function SettingsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
         </div>
       </div>
 
@@ -361,24 +365,32 @@ export default function SettingsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Switch checked={u.isActive} onCheckedChange={() => toggleActive(u)} />
+                      {hasPermission("users:update") ? (
+                        <Switch checked={u.isActive} onCheckedChange={() => toggleActive(u)} />
+                      ) : (
+                        <Badge variant={u.isActive ? "default" : "secondary"}>{u.isActive ? "Yes" : "No"}</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "Never"}
                     </TableCell>
                     <TableCell className="space-x-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => sendResetPin(u._id)}
-                        disabled={resettingUserId === u._id}
-                        title="Send reset PIN"
-                      >
-                        <RotateCcw className={`h-4 w-4 ${resettingUserId === u._id ? "animate-spin" : ""}`} />
-                      </Button>
+                      {hasPermission("users:update") && (
+                        <>
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => sendResetPin(u._id)}
+                          disabled={resettingUserId === u._id}
+                          title="Send reset PIN"
+                        >
+                          <RotateCcw className={`h-4 w-4 ${resettingUserId === u._id ? "animate-spin" : ""}`} />
+                        </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

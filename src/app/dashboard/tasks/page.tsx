@@ -300,17 +300,18 @@ export default function DailyTasksPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="task-hours">Hours</Label>
+                  <Label htmlFor="task-hours">Hours *</Label>
                   <Input
                     id="task-hours"
                     type="number"
-                    min="0"
+                    min="0.5"
                     step="0.5"
                     value={form.durationHours}
                     onChange={(event) =>
                       setForm({ ...form, durationHours: event.target.value })
                     }
-                    placeholder="0"
+                    placeholder="0.5"
+                    required
                   />
                 </div>
               </div>

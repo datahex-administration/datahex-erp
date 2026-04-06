@@ -58,7 +58,7 @@ const typeColors: Record<string, string> = {
 };
 
 export default function EmployeesPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -132,6 +132,7 @@ export default function EmployeesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {hasPermission("reports:export") && (
           <ExportButton data={employees} columns={[
             { key: "employeeId", label: "ID" },
             { key: "name", label: "Name" },
@@ -143,9 +144,12 @@ export default function EmployeesPage() {
             { key: "currency", label: "Currency" },
             { key: "status", label: "Status" },
           ]} filename="employees" />
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 h-4 w-4" /> Add Employee
-          </Button>
+          )}
+          {hasPermission("employees:create") && (
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" /> Add Employee
+            </Button>
+          )}
         </div>
       </div>
 
@@ -257,12 +261,16 @@ export default function EmployeesPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(emp)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(emp)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {hasPermission("employees:update") && (
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(emp)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {hasPermission("employees:delete") && (
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(emp)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

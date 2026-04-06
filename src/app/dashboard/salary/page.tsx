@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { useAuth } from "@/components/providers/auth-provider";
 
 interface EmployeePreview {
   _id: string;
@@ -71,6 +72,7 @@ const MONTHS = [
 ];
 
 export default function SalaryPage() {
+  const { hasPermission } = useAuth();
   const [processings, setProcessings] = useState<SalaryProcessingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
@@ -211,6 +213,7 @@ export default function SalaryPage() {
           <p className="text-muted-foreground mt-1">{total} record{total !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
+          {hasPermission("reports:export") && (
           <ExportButton
             data={processings.flatMap((p) =>
               p.employees.map((emp) => ({
@@ -235,6 +238,8 @@ export default function SalaryPage() {
             ]}
             filename="salary"
           />
+          )}
+          {hasPermission("salary:create") && (
           <Dialog open={processDialogOpen} onOpenChange={handleDialogOpen}>
             <DialogTrigger
               render={<Button><Play className="mr-2 h-4 w-4" /> Process Salary</Button>}
@@ -404,6 +409,7 @@ export default function SalaryPage() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 

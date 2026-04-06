@@ -348,7 +348,7 @@ export function EmployeeFormDialog({
                   <div className="space-y-2">
                     <Label>Company *</Label>
                     <Select
-                      value={form.companyId}
+                      value={form.companyId && companies.some((c) => c._id === form.companyId) ? form.companyId : undefined}
                       onValueChange={(value) => {
                         if (!value) {
                           return;

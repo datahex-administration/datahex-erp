@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { CurrencySelect } from "@/components/forms/currency-select";
 import { extractCollectionData } from "@/lib/form-options";
@@ -31,10 +32,12 @@ interface LineItem {
   rate: string;
 }
 
-export default function NewInvoicePage() {
+export default function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { hasPermission } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [loadingInvoice, setLoadingInvoice] = useState(true);
   const [clients, setClients] = useState<AnyObj[]>([]);
   const [projects, setProjects] = useState<AnyObj[]>([]);
 
@@ -62,6 +65,32 @@ export default function NewInvoicePage() {
     });
   }, []);
 
+  useEffect(() => {
+    fetch(`/api/invoices/${id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setForm({
+          clientId: data.clientId?._id || data.clientId || "",
+          projectId: data.projectId?._id || data.projectId || "",
+          type: data.type || "project",
+          taxPercent: String(data.taxPercent ?? 0),
+          currency: data.currency || "INR",
+          dueDate: data.dueDate ? format(new Date(data.dueDate), "yyyy-MM-dd") : "",
+          notes: data.notes || "",
+        });
+        if (data.items?.length) {
+          setItems(
+            data.items.map((item: AnyObj) => ({
+              description: item.description || "",
+              quantity: String(item.quantity ?? 1),
+              rate: String(item.rate ?? 0),
+            }))
+          );
+        }
+        setLoadingInvoice(false);
+      });
+  }, [id]);
+
   const addItem = () => setItems([...items, { description: "", quantity: "1", rate: "" }]);
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
   const updateItem = (idx: number, field: keyof LineItem, value: string) =>
@@ -87,12 +116,17 @@ export default function NewInvoicePage() {
       return;
     }
     setSaving(true);
-    const res = await fetch("/api/invoices", {
-      method: "POST",
+    const res = await fetch(`/api/invoices/${id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        clientId: form.clientId,
+        projectId: form.projectId || undefined,
+        type: form.type,
         taxPercent: Number(form.taxPercent),
+        currency: form.currency,
+        dueDate: form.dueDate,
+        notes: form.notes || undefined,
         items: validItems.map((i) => ({
           description: i.description.trim(),
           quantity: Number(i.quantity) || 1,
@@ -101,26 +135,32 @@ export default function NewInvoicePage() {
       }),
     });
     if (res.ok) {
-      const invoice = await res.json();
-      toast.success(`Invoice ${invoice.invoiceNumber} created`);
-      router.push(`/dashboard/invoices/${invoice._id}`);
+      toast.success("Invoice updated");
+      router.push(`/dashboard/invoices/${id}`);
     } else {
       const data = await res.json();
-      toast.error(data.error || "Failed to create invoice");
+      toast.error(data.error || "Failed to update invoice");
     }
     setSaving(false);
   };
 
-  // Filter projects by selected client
   const clientProjects = form.clientId
     ? projects.filter((p) => p.clientId === form.clientId || p.clientId?._id === form.clientId)
     : projects;
 
-  if (!hasPermission("invoices:create")) {
+  if (loadingInvoice) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!hasPermission("invoices:update")) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <h2 className="text-xl font-semibold">Access Denied</h2>
-        <p className="text-muted-foreground mt-2">You don't have permission to create invoices.</p>
+        <p className="text-muted-foreground mt-2">You don't have permission to edit invoices.</p>
         <Link href="/dashboard"><Button className="mt-4">Back to Dashboard</Button></Link>
       </div>
     );
@@ -129,12 +169,12 @@ export default function NewInvoicePage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/invoices">
+        <Link href={`/dashboard/invoices/${id}`}>
           <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">New Invoice</h1>
-          <p className="text-muted-foreground mt-1">Create a client invoice</p>
+          <h1 className="text-2xl font-bold">Edit Invoice</h1>
+          <p className="text-muted-foreground mt-1">Update invoice details</p>
         </div>
       </div>
 
@@ -210,7 +250,6 @@ export default function NewInvoicePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Header */}
               <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-1">
                 <div className="col-span-5">Description</div>
                 <div className="col-span-2">Qty</div>
@@ -261,7 +300,6 @@ export default function NewInvoicePage() {
               })}
             </div>
 
-            {/* Totals */}
             <div className="mt-6 border-t pt-4 space-y-2 max-w-xs ml-auto">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
@@ -297,9 +335,9 @@ export default function NewInvoicePage() {
         <div className="flex gap-3">
           <Button type="submit" disabled={saving} className="flex-1">
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Invoice
+            Update Invoice
           </Button>
-          <Link href="/dashboard/invoices">
+          <Link href={`/dashboard/invoices/${id}`}>
             <Button type="button" variant="outline">Cancel</Button>
           </Link>
         </div>

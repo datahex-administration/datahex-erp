@@ -195,6 +195,13 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </Button>
             </>
           )}
+          {(invoice.status === "draft" || invoice.status === "sent") && (
+            <Link href={`/dashboard/invoices/${id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4 mr-1" />Edit
+              </Button>
+            </Link>
+          )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" />Print
           </Button>

@@ -151,6 +151,8 @@ async function seed() {
       "employees:read", "employees:create", "employees:update",
       "salary:read", "salary:create", "salary:approve",
       "leaves:read", "leaves:approve",
+      "attendance:read", "attendance:create",
+      "tasks:read", "tasks:create",
       "projects:read", "projects:create", "projects:update",
       "clients:read", "clients:create",
       "invoices:read", "invoices:create",
@@ -170,6 +172,8 @@ async function seed() {
     companyId: datahex._id,
     permissions: [
       "employees:read", "leaves:read", "leaves:create",
+      "attendance:read", "attendance:create",
+      "tasks:read", "tasks:create",
       "projects:read", "messages:read", "messages:create",
     ],
   });

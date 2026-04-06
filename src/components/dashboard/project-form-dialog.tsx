@@ -56,6 +56,7 @@ interface ProjectDialogData {
   _id?: string;
   name?: string;
   description?: string;
+  type?: string;
   status?: string;
   startDate?: string | Date | null;
   deadline?: string | Date | null;
@@ -74,6 +75,15 @@ interface ProjectFormDialogProps {
   onSaved?: (project: Record<string, unknown>) => void;
 }
 
+const PROJECT_TYPE_OPTIONS = [
+  { value: "web", label: "Web" },
+  { value: "mobile", label: "Mobile" },
+  { value: "design", label: "Design" },
+  { value: "marketing", label: "Marketing" },
+  { value: "consulting", label: "Consulting" },
+  { value: "other", label: "Other" },
+];
+
 const PROJECT_STATUS_OPTIONS = [
   { value: "requirement", label: "Requirement" },
   { value: "proposal", label: "Proposal" },
@@ -88,6 +98,7 @@ function getInitialForm(project?: ProjectDialogData | null) {
     name: project?.name || "",
     clientId: getEntityId(project?.clientId),
     description: project?.description || "",
+    type: project?.type || "",
     status: project?.status || "requirement",
     startDate: toDateInputValue(project?.startDate),
     deadline: toDateInputValue(project?.deadline),
@@ -246,6 +257,7 @@ export function ProjectFormDialog({
           name: form.name.trim(),
           clientId: form.clientId,
           description: form.description.trim() || undefined,
+          type: form.type || undefined,
           status: form.status,
           startDate: form.startDate || undefined,
           deadline: form.deadline || undefined,
@@ -366,6 +378,28 @@ export function ProjectFormDialog({
                       {PROJECT_STATUS_OPTIONS.map((statusOption) => (
                         <SelectItem key={statusOption.value} value={statusOption.value}>
                           {statusOption.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={form.type || "__none__"}
+                    onValueChange={(value) =>
+                      setForm((currentForm) => ({ ...currentForm, type: value === "__none__" ? "" : value }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No type</SelectItem>
+                      {PROJECT_TYPE_OPTIONS.map((typeOption) => (
+                        <SelectItem key={typeOption.value} value={typeOption.value}>
+                          {typeOption.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

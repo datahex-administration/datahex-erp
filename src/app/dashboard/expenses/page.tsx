@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Plus,
+  Pencil,
   Receipt,
   Search,
   Loader2,
@@ -71,7 +72,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
-  const { company } = useAuth();
+  const { company, hasPermission } = useAuth();
   const defaultCurrency = company?.currency || "INR";
 
   const [expenses, setExpenses] = useState<AnyObj[]>([]);
@@ -84,6 +85,7 @@ export default function ExpensesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<AnyObj | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
@@ -127,6 +129,7 @@ export default function ExpensesPage() {
   useEffect(() => { setPage(1); }, [search, typeFilter, statusFilter]);
 
   const resetForm = () => {
+    setEditing(null);
     setForm({
       category: "",
       description: "",
@@ -140,7 +143,23 @@ export default function ExpensesPage() {
     });
   };
 
-  const handleCreate = async () => {
+  const openEdit = (exp: AnyObj) => {
+    setEditing(exp);
+    setForm({
+      category: exp.category || "",
+      description: exp.description || "",
+      amount: String(exp.amount || ""),
+      currency: exp.currency || defaultCurrency,
+      date: exp.date ? format(new Date(exp.date), "yyyy-MM-dd") : "",
+      projectId: exp.projectId?._id || exp.projectId || "",
+      type: exp.type || "general",
+      isRecurring: exp.recurring?.isRecurring || false,
+      frequency: exp.recurring?.frequency || "monthly",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
     setSaving(true);
     const payload: AnyObj = {
       category: form.category,
@@ -155,19 +174,22 @@ export default function ExpensesPage() {
       payload.recurring = { isRecurring: true, frequency: form.frequency };
     }
 
-    const res = await fetch("/api/expenses", {
-      method: "POST",
+    const url = editing ? `/api/expenses/${editing._id}` : "/api/expenses";
+    const method = editing ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (res.ok) {
       setDialogOpen(false);
       resetForm();
-      toast.success("Expense recorded");
+      toast.success(editing ? "Expense updated" : "Expense recorded");
       setPage(1);
     } else {
       const data = await res.json();
-      toast.error(data.error || "Failed to add expense");
+      toast.error(data.error || "Failed to save expense");
     }
     setSaving(false);
   };
@@ -210,6 +232,7 @@ export default function ExpensesPage() {
           <p className="text-muted-foreground mt-1">Track and manage business expenses</p>
         </div>
         <div className="flex items-center gap-2">
+          {hasPermission("reports:export") && (
           <ExportButton data={expenses} columns={[
             { key: "description", label: "Description" },
             { key: "category", label: "Category" },
@@ -219,10 +242,12 @@ export default function ExpensesPage() {
             { key: "date", label: "Date" },
             { key: "status", label: "Status" },
           ]} filename="expenses" />
+          )}
+          {hasPermission("expenses:create") && (
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Expense</Button>} />
             <DialogContent className="sm:max-w-lg">
-              <DialogHeader><DialogTitle>Record Expense</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editing ? "Edit Expense" : "Record Expense"}</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-2">
                 {/* Date and Amount first */}
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -320,13 +345,14 @@ export default function ExpensesPage() {
                   )}
                 </div>
 
-                <Button onClick={handleCreate} disabled={saving || !form.category || !form.description || !form.amount} className="w-full">
+                <Button onClick={handleSubmit} disabled={saving || !form.category || !form.description || !form.amount} className="w-full">
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Record Expense
+                  {editing ? "Update Expense" : "Record Expense"}
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
@@ -430,7 +456,7 @@ export default function ExpensesPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     <p className="font-bold text-lg">{exp.currency} {exp.amount?.toLocaleString()}</p>
                     <div className="flex gap-1">
-                      {exp.status === "pending" && (
+                      {hasPermission("expenses:approve") && exp.status === "pending" && (
                         <>
                           <Button variant="outline" size="sm" className="text-green-600" onClick={() => updateStatus(exp._id, "approved")}>
                             <CheckCircle className="h-3 w-3" />
@@ -440,9 +466,16 @@ export default function ExpensesPage() {
                           </Button>
                         </>
                       )}
+                      {hasPermission("expenses:update") && (
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(exp)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      )}
+                      {hasPermission("expenses:delete") && (
                       <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(exp._id)}>
                         <XCircle className="h-3 w-3" />
                       </Button>
+                      )}
                     </div>
                   </div>
                 </div>

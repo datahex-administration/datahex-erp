@@ -11,12 +11,13 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, FileText, Search, Loader2, Send, CheckCircle,
-  DollarSign, TrendingUp, Clock, AlertTriangle,
+  DollarSign, TrendingUp, Clock, AlertTriangle, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
+import { useAuth } from "@/components/providers/auth-provider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function InvoicesPage() {
+  const { hasPermission } = useAuth();
   const [invoices, setInvoices] = useState<AnyObj[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -110,10 +112,14 @@ export default function InvoicesPage() {
           <p className="text-muted-foreground text-sm">{total} total invoices</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton data={invoices} columns={exportColumns} filename="invoices" />
-          <Link href="/dashboard/invoices/new">
-            <Button><Plus className="h-4 w-4 mr-1" /> New Invoice</Button>
-          </Link>
+          {hasPermission("reports:export") && (
+            <ExportButton data={invoices} columns={exportColumns} filename="invoices" />
+          )}
+          {hasPermission("invoices:create") && (
+            <Link href="/dashboard/invoices/new">
+              <Button><Plus className="h-4 w-4 mr-1" /> New Invoice</Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -210,12 +216,19 @@ export default function InvoicesPage() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        {inv.status === "draft" && (
+                        {hasPermission("invoices:update") && (inv.status === "draft" || inv.status === "sent") && (
+                          <Link href={`/dashboard/invoices/${inv._id}/edit`}>
+                            <Button size="sm" variant="ghost">
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </Link>
+                        )}
+                        {hasPermission("invoices:update") && inv.status === "draft" && (
                           <Button size="sm" variant="outline" onClick={() => updateStatus(inv._id, "sent")}>
                             <Send className="h-3 w-3 mr-1" /> Send
                           </Button>
                         )}
-                        {inv.status === "sent" && (
+                        {hasPermission("invoices:update") && inv.status === "sent" && (
                           <Button size="sm" variant="outline" className="text-green-600" onClick={() => updateStatus(inv._id, "paid")}>
                             <CheckCircle className="h-3 w-3 mr-1" /> Paid
                           </Button>

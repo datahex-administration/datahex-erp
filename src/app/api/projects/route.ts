@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   await connectDB();
   const body = await request.json();
   const {
-    name, clientId, description, status, startDate, deadline,
+    name, clientId, description, type, status, startDate, deadline,
     managerId, managerUserId, team, budget, currency, companyId: bodyCompanyId,
   } = body;
 
@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     clientId,
     name: name.trim(),
     description,
+    type: type || undefined,
     status: status || "requirement",
     startDate: startDate ? new Date(startDate) : undefined,
     deadline: deadline ? new Date(deadline) : undefined,

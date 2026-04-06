@@ -53,7 +53,7 @@ const EXPORT_COLUMNS = [
 ];
 
 export default function CompaniesPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -62,7 +62,7 @@ export default function CompaniesPage() {
   const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Company | null>(null);
-  const [form, setForm] = useState({ name: "", code: "", address: "", billingAddress: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
+  const [form, setForm] = useState({ name: "", code: "", address: "", billingAddress: "", logo: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
 
   const fetchCompanies = useCallback(() => {
     setLoading(true);
@@ -88,7 +88,7 @@ export default function CompaniesPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: "", code: "", address: "", billingAddress: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
+    setForm({ name: "", code: "", address: "", billingAddress: "", logo: "", gstNumber: "", foreignRegistration: "", footnote: "", paymentDetails: "", currency: "INR" });
     setDialogOpen(true);
   };
 
@@ -99,6 +99,7 @@ export default function CompaniesPage() {
       code: company.code,
       address: company.address || "",
       billingAddress: (company as AnyObj).billingAddress || "",
+      logo: (company as AnyObj).logo || "",
       gstNumber: (company as AnyObj).gstNumber || "",
       foreignRegistration: (company as AnyObj).foreignRegistration || "",
       footnote: (company as AnyObj).footnote || "",
@@ -148,7 +149,10 @@ export default function CompaniesPage() {
           <p className="text-muted-foreground mt-1">Manage your organizations</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton data={companies} columns={EXPORT_COLUMNS} filename="companies" />
+          {hasPermission("reports:export") && (
+            <ExportButton data={companies} columns={EXPORT_COLUMNS} filename="companies" />
+          )}
+          {hasPermission("companies:create") && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger render={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Add Company</Button>} />
             <DialogContent className="sm:max-w-2xl">
@@ -186,6 +190,11 @@ export default function CompaniesPage() {
                     <Label>Billing Address</Label>
                     <Textarea value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} placeholder="Billing address (shown on invoices)" rows={2} />
                   </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Logo URL</Label>
+                    <Input value={form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} placeholder="https://example.com/logo.png" />
+                    {form.logo && <img src={form.logo} alt="Logo preview" className="h-10 w-auto mt-1 object-contain" />}
+                  </div>
                   <div className="space-y-2">
                     <Label>GST Number</Label>
                     <Input value={form.gstNumber} onChange={(e) => setForm({ ...form, gstNumber: e.target.value })} placeholder="22AAAAA0000A1Z5" />
@@ -210,6 +219,7 @@ export default function CompaniesPage() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
@@ -253,14 +263,16 @@ export default function CompaniesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {hasPermission("companies:update") && (
                           <Button variant="ghost" size="icon" onClick={() => openEdit(company)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          {user?.role === "super_admin" ? (
+                          )}
+                          {hasPermission("companies:delete") && (
                             <Button variant="ghost" size="icon" onClick={() => handleDelete(company)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
-                          ) : null}
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

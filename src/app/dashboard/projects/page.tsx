@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Eye, Calendar, DollarSign } from "lucide-react";
+import { Plus, Search, Eye, Calendar, DollarSign, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
@@ -24,6 +25,7 @@ interface ProjectData {
   _id: string;
   name: string;
   description?: string;
+  type?: string;
   status: string;
   startDate?: string;
   deadline?: string;
@@ -48,9 +50,11 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 const KANBAN_COLUMNS = ["requirement", "proposal", "in_progress", "review", "completed", "maintenance"];
 
 export default function ProjectsPage() {
+  const { hasPermission } = useAuth();
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectData | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"list" | "kanban">("list");
@@ -122,6 +126,7 @@ export default function ProjectsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {hasPermission("reports:export") && (
           <ExportButton data={exportProjects} columns={[
             { key: "name", label: "Name" },
             { key: "status", label: "Status" },
@@ -132,15 +137,19 @@ export default function ProjectsPage() {
             { key: "budget", label: "Budget" },
             { key: "currency", label: "Currency" },
           ]} filename="projects" />
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Project
-          </Button>
+          )}
+          {hasPermission("projects:create") && (
+            <Button onClick={() => { setEditingProject(null); setDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> New Project
+            </Button>
+          )}
         </div>
       </div>
 
       <ProjectFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditingProject(null); }}
+        project={editingProject}
         onSaved={() => {
           setPage(1);
           fetchProjects();
@@ -183,14 +192,25 @@ export default function ProjectsPage() {
             <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {projects.map((project) => (
-                <Link key={project._id} href={`/dashboard/projects/${project._id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                <Card key={project._id} className="hover:shadow-md transition-shadow h-full">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base leading-tight">{project.name}</CardTitle>
-                        <Badge variant={STATUS_CONFIG[project.status]?.variant || "outline"} className="shrink-0 text-xs">
-                          {STATUS_CONFIG[project.status]?.label || project.status}
-                        </Badge>
+                        <Link href={`/dashboard/projects/${project._id}`} className="flex-1">
+                          <CardTitle className="text-base leading-tight hover:underline">{project.name}</CardTitle>
+                        </Link>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {hasPermission("projects:update") && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingProject(project); setDialogOpen(true); }}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {project.type && (
+                            <Badge variant="outline" className="text-xs capitalize">{project.type}</Badge>
+                          )}
+                          <Badge variant={STATUS_CONFIG[project.status]?.variant || "outline"} className="text-xs">
+                            {STATUS_CONFIG[project.status]?.label || project.status}
+                          </Badge>
+                        </div>
                       </div>
                       {project.clientId ? (
                         <div className="space-y-0.5">
@@ -217,8 +237,7 @@ export default function ProjectsPage() {
                         </p>
                       )}
                     </CardContent>
-                  </Card>
-                </Link>
+                </Card>
               ))}
             </div>
             <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
@@ -247,16 +266,27 @@ export default function ProjectsPage() {
                           <CardContent className="p-4 space-y-2">
                             <div className="flex items-start justify-between">
                               <Link href={`/dashboard/projects/${project._id}`} className="font-medium text-sm hover:underline flex-1">{project.name}</Link>
-                              <Link href={`/dashboard/projects/${project._id}`}>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0"><Eye className="h-3 w-3" /></Button>
-                              </Link>
+                              <div className="flex items-center gap-0.5 shrink-0">
+                                {hasPermission("projects:update") && (
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingProject(project); setDialogOpen(true); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Link href={`/dashboard/projects/${project._id}`}>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6"><Eye className="h-3 w-3" /></Button>
+                                </Link>
+                              </div>
                             </div>
                             {project.clientId && <p className="text-xs text-muted-foreground">{project.clientId.name}</p>}
+                            {project.type && (
+                              <Badge variant="outline" className="text-xs capitalize">{project.type}</Badge>
+                            )}
                             {project.deadline && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />{format(new Date(project.deadline), "dd MMM")}
                               </p>
                             )}
+                            {hasPermission("projects:update") && (
                             <Select value={project.status} onValueChange={(v) => v && handleStatusChange(project._id, v)}>
                               <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
@@ -265,6 +295,7 @@ export default function ProjectsPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            )}
                           </CardContent>
                         </Card>
                       ))}

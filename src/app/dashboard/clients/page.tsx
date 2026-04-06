@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Contact, Eye, FolderKanban, Pencil, Plus, Search } from "lucide-react";
+import { Contact, Eye, FolderKanban, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
@@ -63,6 +64,7 @@ const EMPTY_FORM: ClientFormState = {
 };
 
 export default function ClientsPage() {
+  const { hasPermission } = useAuth();
   const [clients, setClients] = useState<ClientData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -176,6 +178,7 @@ export default function ClientsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {hasPermission("reports:export") && (
           <ExportButton
             data={exportRows}
             columns={[
@@ -188,7 +191,9 @@ export default function ClientsPage() {
             ]}
             filename="clients"
           />
+          )}
           <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+            {hasPermission("clients:create") && (
             <DialogTrigger
               render={
                 <Button onClick={openCreate}>
@@ -196,6 +201,7 @@ export default function ClientsPage() {
                 </Button>
               }
             />
+            )}
             <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit Client" : "Add Client"}</DialogTitle>
@@ -250,12 +256,14 @@ export default function ClientsPage() {
                     <div className="flex gap-2">
                       <Input
                         value={form.phoneCountryCode}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          let val = event.target.value.replace(/[^\d+]/g, "");
+                          if (val && !val.startsWith("+")) val = "+" + val;
                           setForm((currentForm) => ({
                             ...currentForm,
-                            phoneCountryCode: event.target.value,
-                          }))
-                        }
+                            phoneCountryCode: val,
+                          }));
+                        }}
                         placeholder="+91"
                         className="w-24 shrink-0"
                         inputMode="tel"
@@ -386,9 +394,21 @@ export default function ClientsPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(client)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          {hasPermission("clients:update") && (
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(client)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {hasPermission("clients:delete") && (
+                            <Button variant="ghost" size="icon" onClick={async () => {
+                              if (!confirm(`Deactivate ${client.name}?`)) return;
+                              const res = await fetch(`/api/clients/${client._id}`, { method: "DELETE" });
+                              if (res.ok) { toast.success("Client deactivated"); fetchClients(); }
+                              else { const d = await res.json().catch(() => ({})); toast.error(d.error || "Failed"); }
+                            }}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

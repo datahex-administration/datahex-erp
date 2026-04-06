@@ -179,6 +179,7 @@ export default function LeavesPage() {
           <h1 className="text-2xl font-bold">Leave Management</h1>
           <p className="text-muted-foreground mt-1">Manage employee leaves and balances</p>
         </div>
+        {hasPermission("leaves:create") && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={<Button><Plus className="mr-2 h-4 w-4" /> Apply Leave</Button>}
@@ -256,7 +257,8 @@ export default function LeavesPage() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+        )}
+        </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-4">
@@ -378,7 +380,9 @@ export default function LeavesPage() {
             ))}
           </SelectContent>
         </Select>
-        <ExportButton data={leaves} columns={[{ key: "employeeId.name", label: "Employee" }, { key: "type", label: "Type" }, { key: "startDate", label: "Start" }, { key: "endDate", label: "End" }, { key: "days", label: "Days" }, { key: "reason", label: "Reason" }, { key: "status", label: "Status" }]} filename="leaves" />
+        {hasPermission("reports:export") && (
+          <ExportButton data={leaves} columns={[{ key: "employeeId.name", label: "Employee" }, { key: "type", label: "Type" }, { key: "startDate", label: "Start" }, { key: "endDate", label: "End" }, { key: "days", label: "Days" }, { key: "reason", label: "Reason" }, { key: "status", label: "Status" }]} filename="leaves" />
+        )}
       </div>
 
       {/* Leave Applications Table */}
@@ -405,7 +409,7 @@ export default function LeavesPage() {
                   <TableHead>Days</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  {hasPermission("leaves:approve") && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -427,8 +431,9 @@ export default function LeavesPage() {
                         {leave.status}
                       </Badge>
                     </TableCell>
+                    {hasPermission("leaves:approve") && (
                     <TableCell>
-                      {leave.status === "pending" && hasPermission("leaves:approve") && (
+                      {leave.status === "pending" && (
                         <div className="flex gap-1">
                           <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => handleAction(leave._id, "approved")}>
                             <Check className="h-4 w-4" />
@@ -439,6 +444,7 @@ export default function LeavesPage() {
                         </div>
                       )}
                     </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

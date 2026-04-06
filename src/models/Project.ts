@@ -5,6 +5,7 @@ export interface IProject extends Document {
   clientId: Types.ObjectId;
   name: string;
   description?: string;
+  type?: "web" | "mobile" | "design" | "marketing" | "consulting" | "other";
   status: "requirement" | "proposal" | "in_progress" | "review" | "completed" | "maintenance";
   startDate?: Date;
   deadline?: Date;
@@ -30,6 +31,10 @@ const ProjectSchema = new Schema<IProject>(
     clientId: { type: Schema.Types.ObjectId, ref: "Client", required: true },
     name: { type: String, required: true, trim: true },
     description: { type: String },
+    type: {
+      type: String,
+      enum: ["web", "mobile", "design", "marketing", "consulting", "other"],
+    },
     status: {
       type: String,
       enum: ["requirement", "proposal", "in_progress", "review", "completed", "maintenance"],
