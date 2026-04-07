@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Only super_admin and managers can view audit logs
-  if (session.role === "staff") {
+  if (session.role === "staff" || session.role === "customer_success") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

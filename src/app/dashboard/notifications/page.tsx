@@ -43,7 +43,7 @@ type AnyObj = Record<string, any>;
 
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const isManager = user?.role !== "staff";
+  const isManager = user?.role !== "staff" && user?.role !== "customer_success";
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [users, setUsers] = useState<AnyObj[]>([]);
   const [loading, setLoading] = useState(true);

@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   whatsappNumber?: string;
   pin: string; // bcrypt hashed
-  role: "super_admin" | "manager" | "staff";
+  role: "super_admin" | "manager" | "customer_success" | "staff";
   companyId: Types.ObjectId;
   permissions: string[];
   isActive: boolean;
@@ -22,7 +22,7 @@ const UserSchema = new Schema<IUser>(
     pin: { type: String, required: true },
     role: {
       type: String,
-      enum: ["super_admin", "manager", "staff"],
+      enum: ["super_admin", "manager", "customer_success", "staff"],
       default: "staff",
     },
     companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true },

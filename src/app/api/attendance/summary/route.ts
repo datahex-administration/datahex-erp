@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Only managers and super_admin can view team summary
-  if (session.role === "staff") {
+  if (session.role === "staff" || session.role === "customer_success") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -175,7 +175,7 @@ export default function BugReportingPage() {
     setLoading(false);
   }, [page, search, statusFilter, priorityFilter, projectFilter, assigneeFilter, dateFrom, dateTo]);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, priorityFilter, projectFilter, assigneeFilter, dateFrom, dateTo]);
+  useEffect(() => { setPage((prev) => prev === 1 ? prev : 1); }, [search, statusFilter, priorityFilter, projectFilter, assigneeFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     const timer = setTimeout(fetchBugs, 300);
@@ -240,18 +240,22 @@ export default function BugReportingPage() {
   /* ─── status update (inline) ─── */
 
   const handleStatusChange = async (bugId: string, newStatus: string) => {
+    // Avoid re-fetching if the status hasn't actually changed
+    const current = bugs.find((b) => b._id === bugId);
+    if (current?.status === newStatus) return;
+
     const res = await fetch(`/api/bugs/${bugId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
     if (res.ok) {
+      const updated = await res.json();
       toast.success(`Status updated to ${STATUS_LABELS[newStatus]}`);
-      fetchBugs();
       if (detailBug?._id === bugId) {
-        const updated = await res.json();
         setDetailBug(updated);
       }
+      fetchBugs();
     } else {
       toast.error("Failed to update status");
     }
@@ -521,7 +525,7 @@ export default function BugReportingPage() {
                             >
                               <FileDown className="h-4 w-4" />
                             </Button>
-                            {(user?.role === "super_admin" || user?.role === "manager") && (
+                            {(user?.role === "super_admin" || user?.role === "manager" || user?.role === "customer_success") && (
                               <>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(bug)}>
                                   <span className="text-xs">✏️</span>

@@ -22,13 +22,12 @@ export async function GET() {
 
   const company = await Company.findById(session.companyId).lean().exec();
 
-  // Merge session permissions with latest role defaults so new modules show up
-  const rolePerms = getRolePermissions(session.role as RoleName);
-  const mergedPermissions = [...new Set([...session.permissions, ...rolePerms])];
+  // Always derive permissions from role definition so code updates take effect immediately
+  const permissions = getRolePermissions(session.role as RoleName);
 
   return NextResponse.json({
     user,
     company,
-    permissions: mergedPermissions,
+    permissions,
   });
 }

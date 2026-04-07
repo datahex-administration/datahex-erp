@@ -27,7 +27,7 @@ const MONTHS = [
 
 export default function AttendancePage() {
   const { user, hasPermission } = useAuth();
-  const isManager = user?.role !== "staff";
+  const isManager = user?.role !== "staff" && user?.role !== "customer_success";
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);

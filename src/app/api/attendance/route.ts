@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
   const page = Math.max(Number(searchParams.get("page")) || 1, 1);
   const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 31, 1), 100);
 
-  // Staff can only see own records
+  // Staff/customer_success can only see own records
   const targetUserId =
-    requestedUserId && session.role !== "staff" ? requestedUserId : session.userId;
+    requestedUserId && session.role !== "staff" && session.role !== "customer_success" ? requestedUserId : session.userId;
 
   const query: Record<string, unknown> = {
     companyId: session.companyId,

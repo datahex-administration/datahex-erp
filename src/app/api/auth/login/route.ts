@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { verifyPin, createSession } from "@/lib/auth";
 import User from "@/models/User";
 import { logAudit } from "@/lib/audit";
+import { getRolePermissions, type RoleName } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,17 +46,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create session
+    // Always derive permissions from the role definition so code updates take effect
+    const rolePermissions = getRolePermissions(user.role as RoleName);
+
     await createSession({
       userId: user._id.toString(),
       role: user.role,
       companyId: user.companyId.toString(),
-      permissions: user.permissions,
+      permissions: rolePermissions,
     });
 
     after(async () => {
       const results = await Promise.allSettled([
-        User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } }).exec(),
+        User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date(), permissions: rolePermissions } }).exec(),
         logAudit({
           companyId: user.companyId.toString(),
           userId: user._id.toString(),

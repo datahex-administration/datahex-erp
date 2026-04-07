@@ -25,7 +25,7 @@ export async function PUT(
   // Only the record owner can clock out (or super_admin/manager)
   if (
     record.userId.toString() !== session.userId &&
-    session.role === "staff"
+    (session.role === "staff" || session.role === "customer_success")
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

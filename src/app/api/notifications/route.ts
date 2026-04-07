@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Only manager/super_admin can create notifications
-  if (session.role === "staff") {
+  if (session.role === "staff" || session.role === "customer_success") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

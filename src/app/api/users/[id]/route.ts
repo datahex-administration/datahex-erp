@@ -54,25 +54,29 @@ export async function PUT(
 
   if (
     session.role !== "super_admin" &&
-    existingUser.role !== "staff"
+    existingUser.role !== "staff" &&
+    existingUser.role !== "customer_success"
   ) {
-    return NextResponse.json({ error: "Managers can only update staff users" }, { status: 403 });
+    return NextResponse.json({ error: "Managers can only update staff/customer_success users" }, { status: 403 });
   }
 
   const body = await request.json();
   const update: Record<string, unknown> = {};
 
   if (body.name) update.name = body.name.trim();
-  if (body.role && session.role === "super_admin") {
-    const nextRole: RoleName = ["super_admin", "manager", "staff"].includes(body.role)
-      ? body.role
-      : existingUser.role;
-    update.role = nextRole;
-    if (!body.permissions) {
+  if (body.role) {
+    let nextRole: RoleName | null = null;
+    if (session.role === "super_admin" && ["super_admin", "manager", "customer_success", "staff"].includes(body.role)) {
+      nextRole = body.role;
+    } else if (session.role === "manager" && ["customer_success", "staff"].includes(body.role)) {
+      nextRole = body.role;
+    }
+    if (nextRole) {
+      update.role = nextRole;
       update.permissions = getRolePermissions(nextRole);
     }
   }
-  if (body.permissions && Array.isArray(body.permissions)) update.permissions = body.permissions;
+  if (body.permissions && Array.isArray(body.permissions) && session.role === "super_admin") update.permissions = body.permissions;
   if (body.isActive !== undefined) update.isActive = body.isActive;
   if (body.pin && /^\d{6}$/.test(body.pin)) {
     update.pin = await hashPin(body.pin);

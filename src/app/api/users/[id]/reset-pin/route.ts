@@ -25,7 +25,7 @@ export async function POST(
 
   if (
     session.role !== "super_admin" &&
-    (user.companyId.toString() !== session.companyId || user.role !== "staff")
+    (user.companyId.toString() !== session.companyId || (user.role !== "staff" && user.role !== "customer_success"))
   ) {
     return NextResponse.json({ error: "Managers can only reset staff users in their company" }, { status: 403 });
   }

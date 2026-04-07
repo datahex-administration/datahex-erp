@@ -31,7 +31,7 @@ const UserSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true, lowercase: true },
   pin: String,
-  role: { type: String, enum: ["super_admin", "manager", "staff"], default: "staff" },
+  role: { type: String, enum: ["super_admin", "manager", "customer_success", "staff"], default: "staff" },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company" },
   permissions: [String],
   isActive: { type: Boolean, default: true },
@@ -131,6 +131,7 @@ async function seed() {
   const adminPin = await bcrypt.hash("123456", 12);
   const managerPin = await bcrypt.hash("654321", 12);
   const staffPin = await bcrypt.hash("111111", 12);
+  const csPin = await bcrypt.hash("222222", 12);
 
   const admin = await User.create({
     name: "Admin",
@@ -178,10 +179,28 @@ async function seed() {
     ],
   });
 
+  const csUser = await User.create({
+    name: "Customer Success",
+    email: "cs@datahex.com",
+    pin: csPin,
+    role: "customer_success",
+    companyId: datahex._id,
+    permissions: [
+      "projects:read", "clients:read", "clients:create", "clients:update",
+      "invoices:read",
+      "bugs:read", "bugs:create", "bugs:update", "bugs:delete",
+      "messages:read", "messages:create",
+      "reports:read", "reports:export",
+      "attendance:read", "attendance:create",
+      "employees:read", "subscriptions:read",
+    ],
+  });
+
   console.log("👥 Created users:");
-  console.log("   Admin:   admin@datahex.com   / PIN: 123456");
-  console.log("   Manager: manager@datahex.com / PIN: 654321");
-  console.log("   Staff:   staff@datahex.com   / PIN: 111111\n");
+  console.log("   Admin:            admin@datahex.com   / PIN: 123456");
+  console.log("   Manager:          manager@datahex.com / PIN: 654321");
+  console.log("   Staff:            staff@datahex.com   / PIN: 111111");
+  console.log("   Customer Success: cs@datahex.com      / PIN: 222222\n");
 
   // Create employees
   const employees = await Employee.insertMany([

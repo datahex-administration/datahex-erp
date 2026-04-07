@@ -254,7 +254,7 @@ export default function SettingsPage() {
                     required={!editing}
                   />
                 </div>
-                {currentUser?.role === "super_admin" && (
+                {(currentUser?.role === "super_admin" || currentUser?.role === "manager") && (
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Role</Label>
                     <Select value={form.role} onValueChange={(v) => v && setForm({ ...form, role: v })}>
@@ -262,8 +262,9 @@ export default function SettingsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
+                        {currentUser?.role === "super_admin" && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                        {currentUser?.role === "super_admin" && <SelectItem value="manager">Manager</SelectItem>}
+                        <SelectItem value="customer_success">Customer Success</SelectItem>
                         <SelectItem value="staff">Staff</SelectItem>
                       </SelectContent>
                     </Select>

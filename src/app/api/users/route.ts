@@ -86,9 +86,11 @@ export async function POST(request: NextRequest) {
   const targetCompanyId =
     session.role === "super_admin" ? companyId || session.companyId : session.companyId;
   const targetRole: RoleName =
-    session.role === "super_admin" && ["super_admin", "manager", "staff"].includes(role)
+    session.role === "super_admin" && ["super_admin", "manager", "customer_success", "staff"].includes(role)
       ? role
-      : "staff";
+      : session.role === "manager" && ["customer_success", "staff"].includes(role)
+        ? role
+        : "staff";
 
   const hashedPin = await hashPin(pin);
   const targetPermissions =

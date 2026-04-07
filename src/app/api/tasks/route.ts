@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   }
 
   const targetUserId =
-    body.userId && session.role !== "staff" ? body.userId : session.userId;
+    body.userId && session.role !== "staff" && session.role !== "customer_success" ? body.userId : session.userId;
 
   const task = await DailyTask.create({
     userId: targetUserId,
