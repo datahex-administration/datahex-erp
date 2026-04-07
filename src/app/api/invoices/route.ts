@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Invoice from "@/models/Invoice";
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
     Invoice.find(filter)
       .populate("clientId", "name company email")
       .populate("projectId", "name")
+      .populate("companyId", "name code logo")
       .sort({ issueDate: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -53,15 +55,29 @@ export async function POST(request: NextRequest) {
   await connectDB();
   const body = await request.json();
 
-  const { clientId, projectId, type, items, taxPercent, currency, dueDate, notes } = body;
+  const { clientId, projectId, type, items, taxPercent, currency, dueDate, notes, companyId: bodyCompanyId } = body;
 
-  if (!clientId || !items?.length || !dueDate) {
+  // super_admin can specify a different companyId; otherwise use session
+  const rawCompanyId = (session.role === "super_admin" && bodyCompanyId && bodyCompanyId.trim()) ? bodyCompanyId.trim() : session.companyId;
+
+  // Validate that companyId is a valid ObjectId
+  if (!rawCompanyId || !mongoose.Types.ObjectId.isValid(rawCompanyId)) {
+    return NextResponse.json({ error: "A valid company is required" }, { status: 400 });
+  }
+  const companyId = rawCompanyId;
+
+  if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
+    return NextResponse.json({ error: "A valid client is required" }, { status: 400 });
+  }
+
+  if (!items?.length || !dueDate) {
     return NextResponse.json(
-      { error: "Client, at least one item, and due date are required" },
+      { error: "At least one item and due date are required" },
       { status: 400 }
     );
   }
 
+  try {
   // Calculate totals
   const computedItems = items.map((item: { description: string; quantity: number; rate: number }) => ({
     description: item.description,
@@ -78,16 +94,23 @@ export async function POST(request: NextRequest) {
   // Generate invoice number: INV-YYYYMM-XXXX
   const now = new Date();
   const prefix = `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const count = await Invoice.countDocuments({
-    companyId: session.companyId,
-    invoiceNumber: { $regex: `^${prefix}` },
-  });
-  const invoiceNumber = `${prefix}-${String(count + 1).padStart(4, "0")}`;
+  const lastInvoice = await Invoice.findOne(
+    { invoiceNumber: { $regex: `^${prefix}-` } },
+    { invoiceNumber: 1 },
+    { sort: { invoiceNumber: -1 } }
+  ).lean();
+  let nextSeq = 1;
+  if (lastInvoice && typeof lastInvoice.invoiceNumber === "string") {
+    const parts = lastInvoice.invoiceNumber.split("-");
+    const lastSeq = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
+  }
+  const invoiceNumber = `${prefix}-${String(nextSeq).padStart(4, "0")}`;
 
   const invoice = await Invoice.create({
-    companyId: session.companyId,
+    companyId: companyId,
     clientId,
-    projectId: projectId || undefined,
+    projectId: (projectId && mongoose.Types.ObjectId.isValid(projectId)) ? projectId : undefined,
     invoiceNumber,
     type: type || "project",
     items: computedItems,
@@ -103,7 +126,7 @@ export async function POST(request: NextRequest) {
   });
 
   await logAudit({
-    companyId: session.companyId,
+    companyId: companyId,
     userId: session.userId,
     action: "create",
     module: "invoices",
@@ -111,4 +134,9 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(invoice, { status: 201 });
+  } catch (error) {
+    console.error("Invoice creation error:", error);
+    const message = error instanceof Error ? error.message : "Failed to create invoice";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

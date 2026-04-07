@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import Project from "@/models/Project";
+import "@/models/Client";
+import "@/models/Employee";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";

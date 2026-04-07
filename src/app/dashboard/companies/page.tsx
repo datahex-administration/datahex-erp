@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Building2, Search, Trash2 } from "lucide-react";
+import { Plus, Pencil, Building2, Search, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
@@ -107,6 +107,24 @@ export default function CompaniesPage() {
       currency: company.currency,
     });
     setDialogOpen(true);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 512 * 1024) {
+      toast.error("Image must be less than 512 KB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm((prev) => ({ ...prev, logo: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,9 +209,21 @@ export default function CompaniesPage() {
                     <Textarea value={form.billingAddress} onChange={(e) => setForm({ ...form, billingAddress: e.target.value })} placeholder="Billing address (shown on invoices)" rows={2} />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Logo URL</Label>
-                    <Input value={form.logo} onChange={(e) => setForm({ ...form, logo: e.target.value })} placeholder="https://example.com/logo.png" />
-                    {form.logo && <img src={form.logo} alt="Logo preview" className="h-10 w-auto mt-1 object-contain" />}
+                    <Label>Logo</Label>
+                    {form.logo ? (
+                      <div className="flex items-center gap-3 rounded-md border p-2">
+                        <img src={form.logo} alt="Logo preview" className="h-12 w-auto object-contain" />
+                        <Button type="button" variant="ghost" size="icon" className="ml-auto" onClick={() => setForm({ ...form, logo: "" })}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                        <Upload className="h-4 w-4" />
+                        Upload logo (max 512 KB)
+                        <Input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                      </label>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>GST Number</Label>

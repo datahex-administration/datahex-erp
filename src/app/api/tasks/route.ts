@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = request.nextUrl;
   const requestedUserId = searchParams.get("userId");
-  const targetUserId =
-    requestedUserId && session.role !== "staff" ? requestedUserId : session.userId;
+  const allUsers = searchParams.get("allUsers") === "true";
+  const isAdmin = session.role === "super_admin" || session.role === "manager";
 
   let dateRange;
   const days = Math.min(Math.max(Number(searchParams.get("days")) || 1, 1), 60);
@@ -47,16 +47,33 @@ export async function GET(request: NextRequest) {
   rangeStart.setHours(0, 0, 0, 0);
   rangeStart.setDate(rangeStart.getDate() - (days - 1));
 
-  const tasks = await DailyTask.find({
+  // Build filter
+  const filter: Record<string, unknown> = {
     companyId: session.companyId,
-    userId: targetUserId,
-    workDate: {
-      $gte: rangeStart,
-      $lte: dateRange.end,
-    },
-  })
-    .sort({ workDate: -1, createdAt: -1 })
-    .lean();
+    workDate: { $gte: rangeStart, $lte: dateRange.end },
+  };
+
+  // If allUsers mode requested by admin, don't filter by userId
+  // If a specific userId is requested by admin, filter by that user
+  // Otherwise filter by the logged-in user's own tasks
+  if (allUsers && isAdmin) {
+    // no userId filter — fetch all users' tasks
+  } else if (requestedUserId && isAdmin) {
+    filter.userId = requestedUserId;
+  } else {
+    filter.userId = session.userId;
+  }
+
+  const query = DailyTask.find(filter)
+    .populate("projectId", "name")
+    .sort({ workDate: -1, createdAt: -1 });
+
+  // Populate user details when viewing all users or another user's tasks
+  if (isAdmin && (allUsers || (requestedUserId && requestedUserId !== session.userId))) {
+    query.populate("userId", "name email role");
+  }
+
+  const tasks = await query.lean();
 
   return NextResponse.json(tasks);
 }
@@ -88,6 +105,7 @@ export async function POST(request: NextRequest) {
   const task = await DailyTask.create({
     userId: targetUserId,
     companyId: session.companyId,
+    projectId: body.projectId || undefined,
     title: body.title.trim(),
     description: body.description?.trim() || undefined,
     workDate: workDateRange.start,
@@ -100,5 +118,7 @@ export async function POST(request: NextRequest) {
         : undefined,
   });
 
-  return NextResponse.json(task, { status: 201 });
+  // Re-fetch with populated projectId
+  const populated = await DailyTask.findById(task._id).populate("projectId", "name").lean();
+  return NextResponse.json(populated, { status: 201 });
 }

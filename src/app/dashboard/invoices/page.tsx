@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, FileText, Search, Loader2, Send, CheckCircle,
-  DollarSign, TrendingUp, Clock, AlertTriangle, Pencil,
+  DollarSign, TrendingUp, Clock, AlertTriangle, Pencil, Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -88,6 +88,14 @@ export default function InvoicesPage() {
 
   const fmtCurrency = (v: number, c = "INR") =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: c }).format(v);
+
+  const downloadInvoice = (invoiceId: string) => {
+    const w = window.open(`/api/invoices/${invoiceId}/pdf`, "_blank");
+    if (w) {
+      w.addEventListener("afterprint", () => w.close());
+      w.onload = () => setTimeout(() => w.print(), 400);
+    }
+  };
 
   const exportColumns = [
     { key: "invoiceNumber", label: "Invoice #" },
@@ -216,6 +224,9 @@ export default function InvoicesPage() {
                         )}
                       </div>
                       <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" title="Download PDF" onClick={() => downloadInvoice(inv._id)}>
+                          <Download className="h-3 w-3" />
+                        </Button>
                         {hasPermission("invoices:update") && (inv.status === "draft" || inv.status === "sent") && (
                           <Link href={`/dashboard/invoices/${inv._id}/edit`}>
                             <Button size="sm" variant="ghost">

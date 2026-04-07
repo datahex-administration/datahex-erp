@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Users, Eye, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Users, Eye, Pencil, Trash2, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 import { ExportButton } from "@/components/ui/export-button";
@@ -261,6 +261,14 @@ export default function EmployeesPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Download Certificate"
+                            onClick={() => window.open(`/api/employees/${emp._id}/certificate`, "_blank")}
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </Button>
                           {hasPermission("employees:update") && (
                             <Button variant="ghost" size="icon" onClick={() => openEditDialog(emp)}>
                               <Pencil className="h-4 w-4" />

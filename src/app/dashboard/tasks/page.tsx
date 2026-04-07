@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Loader2, Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { Loader2, Mail, MessageCircle, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,9 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
+import { useAuth } from "@/components/providers/auth-provider";
+import { extractCollectionData } from "@/lib/form-options";
 
 interface TaskItem {
   _id: string;
@@ -28,6 +31,20 @@ interface TaskItem {
   workDate: string;
   lastReportedAt?: string;
   createdAt: string;
+  userId?: string | { _id: string; name: string; email: string; role: string };
+  projectId?: string | { _id: string; name: string };
+}
+
+interface ProjectOption {
+  _id: string;
+  name: string;
+}
+
+interface TeamUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 const STATUS_OPTIONS = [
@@ -43,26 +60,59 @@ const STATUS_VARIANTS: Record<TaskItem["status"], "secondary" | "default" | "out
 };
 
 export default function DailyTasksPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "super_admin" || user?.role === "manager";
+
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [recentTasks, setRecentTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
+
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+
+  // Team view state (admin only)
+  const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("mine");
+  const [teamTasks, setTeamTasks] = useState<TaskItem[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
     status: "planned",
     durationHours: "",
+    projectId: "",
   });
+
+  // Fetch projects
+  useEffect(() => {
+    fetch("/api/projects?limit=200")
+      .then((r) => r.json())
+      .then((json) => setProjects(extractCollectionData<ProjectOption>(json)));
+  }, []);
+
+  // Fetch team users for admin
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch("/api/users?limit=100")
+      .then((r) => r.json())
+      .then((json) => {
+        const users = json.data || json || [];
+        setTeamUsers(Array.isArray(users) ? users.filter((u: TeamUser) => u._id !== user?.id) : []);
+      });
+  }, [isAdmin, user?.id]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
 
+    const userParam = selectedUserId !== "mine" ? `&userId=${selectedUserId}` : "";
+
     try {
       const [selectedDayResponse, recentResponse] = await Promise.all([
-        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}`),
-        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}&days=7`),
+        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}${userParam}`),
+        fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}&days=7${userParam}`),
       ]);
 
       if (selectedDayResponse.ok) {
@@ -81,11 +131,32 @@ export default function DailyTasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, selectedUserId]);
+
+  // Fetch all team tasks for the selected date (admin overview)
+  const fetchTeamTasks = useCallback(async () => {
+    if (!isAdmin) return;
+    setTeamLoading(true);
+    try {
+      const res = await fetch(`/api/tasks?date=${encodeURIComponent(selectedDate)}&allUsers=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setTeamTasks(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [isAdmin, selectedDate]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    fetchTeamTasks();
+  }, [fetchTeamTasks]);
 
   const summary = useMemo(() => {
     const completed = tasks.filter((task) => task.status === "completed").length;
@@ -115,6 +186,33 @@ export default function DailyTasksPage() {
     return Array.from(grouped.values()).sort((left, right) => right.date.localeCompare(left.date));
   }, [recentTasks]);
 
+  // Team summary: group all users' tasks by user for the selected date
+  const teamByUser = useMemo(() => {
+    if (!isAdmin) return [];
+    const grouped = new Map<string, { userId: string; name: string; role: string; total: number; completed: number; inProgress: number; totalHours: number }>();
+
+    teamTasks.forEach((task) => {
+      const u = typeof task.userId === "object" && task.userId ? task.userId : null;
+      const uid = u?._id || (typeof task.userId === "string" ? task.userId : "unknown");
+      const name = u?.name || "Unknown";
+      const role = u?.role || "";
+      const current = grouped.get(uid) || { userId: uid, name, role, total: 0, completed: 0, inProgress: 0, totalHours: 0 };
+      current.total += 1;
+      current.completed += task.status === "completed" ? 1 : 0;
+      current.inProgress += task.status === "in_progress" ? 1 : 0;
+      current.totalHours += task.durationHours || 0;
+      grouped.set(uid, current);
+    });
+
+    return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [isAdmin, teamTasks]);
+
+  // Viewing another user's tasks (read-only mode)
+  const isViewingOther = selectedUserId !== "mine";
+  const viewingUserName = isViewingOther
+    ? teamUsers.find((u) => u._id === selectedUserId)?.name || "Team member"
+    : null;
+
   const handleCreateTask = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -124,8 +222,10 @@ export default function DailyTasksPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        projectId: form.projectId || undefined,
         workDate: selectedDate,
         durationHours: form.durationHours ? Number(form.durationHours) : undefined,
+        ...(isViewingOther ? { userId: selectedUserId } : {}),
       }),
     });
 
@@ -133,7 +233,7 @@ export default function DailyTasksPage() {
 
     if (res.ok) {
       toast.success("Task added to your daily report");
-      setForm({ title: "", description: "", status: "planned", durationHours: "" });
+      setForm({ title: "", description: "", status: "planned", durationHours: "", projectId: "" });
       setTasks((currentTasks) => [data, ...currentTasks]);
       setRecentTasks((currentTasks) => [data, ...currentTasks]);
     } else {
@@ -222,6 +322,67 @@ export default function DailyTasksPage() {
         </div>
       </div>
 
+      {/* Team Overview Card (admin only) */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Team Overview — {format(new Date(selectedDate), "dd MMM yyyy")}
+            </CardTitle>
+            <CardDescription>
+              All team members' tasks for the selected date.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {teamLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : teamByUser.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">No team tasks for this date.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Completed</TableHead>
+                    <TableHead className="text-center">In Progress</TableHead>
+                    <TableHead className="text-center">Hours</TableHead>
+                    <TableHead className="w-[100px]">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teamByUser.map((member) => (
+                    <TableRow key={member.userId}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">{member.role.replace("_", " ")}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{member.total}</TableCell>
+                      <TableCell className="text-center">{member.completed}</TableCell>
+                      <TableCell className="text-center">{member.inProgress}</TableCell>
+                      <TableCell className="text-center">{member.totalHours}h</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedUserId(member.userId)}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -276,6 +437,18 @@ export default function DailyTasksPage() {
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                   placeholder="Short summary of what was done"
                   rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Project</Label>
+                <Combobox
+                  options={projects.map((p) => ({ value: p._id, label: p.name }))}
+                  value={form.projectId}
+                  onValueChange={(v) => setForm({ ...form, projectId: v })}
+                  placeholder="Select project (optional)"
+                  searchPlaceholder="Search projects..."
+                  emptyText="No projects found"
                 />
               </div>
 
@@ -424,11 +597,40 @@ export default function DailyTasksPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Tasks for {format(new Date(selectedDate), "dd MMM yyyy")}</CardTitle>
-              <CardDescription>
-                Update completion status here before you send the report.
-              </CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>
+                  {isViewingOther
+                    ? `${viewingUserName}'s tasks for ${format(new Date(selectedDate), "dd MMM yyyy")}`
+                    : `Tasks for ${format(new Date(selectedDate), "dd MMM yyyy")}`
+                  }
+                </CardTitle>
+                <CardDescription>
+                  {isViewingOther
+                    ? "Viewing another team member's tasks."
+                    : "Update completion status here before you send the report."
+                  }
+                </CardDescription>
+              </div>
+              {isAdmin && (
+                <Select value={selectedUserId} onValueChange={(v) => v && setSelectedUserId(v)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select user">
+                      {selectedUserId === "mine"
+                        ? "My Tasks"
+                        : teamUsers.find((u) => u._id === selectedUserId)?.name || "Loading..."}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mine">My Tasks</SelectItem>
+                    {teamUsers.map((u) => (
+                      <SelectItem key={u._id} value={u._id}>
+                        {u.name} <span className="text-muted-foreground ml-1 text-xs">({u.role.replace("_", " ")})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -459,9 +661,16 @@ export default function DailyTasksPage() {
                             {task.description && (
                               <p className="text-sm text-muted-foreground">{task.description}</p>
                             )}
-                            <Badge variant={STATUS_VARIANTS[task.status]}>
-                              {STATUS_OPTIONS.find((status) => status.value === task.status)?.label}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={STATUS_VARIANTS[task.status]}>
+                                {STATUS_OPTIONS.find((status) => status.value === task.status)?.label}
+                              </Badge>
+                              {task.projectId && typeof task.projectId === "object" && (
+                                <Badge variant="outline" className="text-xs">
+                                  {task.projectId.name}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>

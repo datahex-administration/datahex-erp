@@ -37,8 +37,10 @@ export default function NewInvoicePage() {
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<AnyObj[]>([]);
   const [projects, setProjects] = useState<AnyObj[]>([]);
+  const [companies, setCompanies] = useState<AnyObj[]>([]);
 
   const [form, setForm] = useState({
+    companyId: "",
     clientId: "",
     projectId: "",
     type: "project",
@@ -56,9 +58,15 @@ export default function NewInvoicePage() {
     Promise.all([
       fetch("/api/clients?limit=100").then((r) => r.json()),
       fetch("/api/projects?limit=100").then((r) => r.json()),
-    ]).then(([c, p]) => {
+      fetch("/api/companies?limit=100").then((r) => r.json()),
+    ]).then(([c, p, co]) => {
       setClients(extractCollectionData<AnyObj>(c));
       setProjects(extractCollectionData<AnyObj>(p));
+      const companyList = extractCollectionData<AnyObj>(co);
+      setCompanies(companyList);
+      if (companyList.length === 1) {
+        setForm((prev) => ({ ...prev, companyId: companyList[0]._id, currency: companyList[0].currency || prev.currency }));
+      }
     });
   }, []);
 
@@ -76,6 +84,10 @@ export default function NewInvoicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.companyId) {
+      toast.error("Please select a company");
+      return;
+    }
     const validItems = items.filter((i) => i.description.trim() && Number(i.rate) > 0);
     if (!validItems.length) {
       toast.error("Add at least one line item with description and rate > 0");
@@ -91,7 +103,13 @@ export default function NewInvoicePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        companyId: form.companyId,
+        clientId: form.clientId,
+        projectId: form.projectId || undefined,
+        type: form.type,
+        currency: form.currency,
+        dueDate: form.dueDate,
+        notes: form.notes || undefined,
         taxPercent: Number(form.taxPercent),
         items: validItems.map((i) => ({
           description: i.description.trim(),
@@ -142,6 +160,22 @@ export default function NewInvoicePage() {
         <Card>
           <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Company *</Label>
+              <Combobox
+                options={companies.map((c) => ({
+                  value: c._id,
+                  label: c.name + (c.code ? ` (${c.code})` : ""),
+                }))}
+                value={form.companyId}
+                onValueChange={(v) => {
+                  const selected = companies.find((c) => c._id === v);
+                  setForm({ ...form, companyId: v, currency: selected?.currency || form.currency });
+                }}
+                placeholder="Select company"
+                searchPlaceholder="Search companies..."
+              />
+            </div>
             <div className="space-y-2">
               <Label>Client *</Label>
               <Combobox

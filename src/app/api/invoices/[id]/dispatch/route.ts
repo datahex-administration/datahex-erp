@@ -40,7 +40,7 @@ export async function POST(
   const invoice = await Invoice.findById(id)
     .populate("clientId", "name company email phone address")
     .populate("projectId", "name")
-    .populate("companyId", "name code currency address")
+    .populate("companyId", "name code currency address billingAddress logo gstNumber foreignRegistration footnote paymentDetails")
     .lean();
 
   if (!invoice) {
@@ -63,6 +63,12 @@ export async function POST(
     code?: string;
     currency?: string;
     address?: string;
+    billingAddress?: string;
+    logo?: string;
+    gstNumber?: string;
+    foreignRegistration?: string;
+    footnote?: string;
+    paymentDetails?: string;
   };
   const invoiceItems = invoice.items as Array<{
     description: string;
@@ -91,9 +97,19 @@ export async function POST(
     .filter(Boolean)
     .join("\n");
 
+  const companyAddress = company?.billingAddress || company?.address || "";
+
   const emailHtml = `
-    <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
-      <h2 style="margin-bottom: 8px;">Invoice ${invoice.invoiceNumber}</h2>
+    <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6; max-width: 680px; margin: 0 auto;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+        <div>
+          ${company?.logo ? `<img src="${company.logo}" alt="${company.name || ""}" style="max-height: 48px; max-width: 180px; object-fit: contain; margin-bottom: 8px;" />` : ""}
+          <h2 style="margin: 0 0 4px 0; font-size: 20px;">Invoice ${invoice.invoiceNumber}</h2>
+          <p style="margin: 0; font-size: 13px; color: #6b7280;">${company?.name || ""}</p>
+          ${companyAddress ? `<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280; white-space: pre-line;">${companyAddress}</p>` : ""}
+          ${company?.gstNumber ? `<p style="margin: 2px 0 0; font-size: 12px; color: #6b7280;">GST: ${company.gstNumber}</p>` : ""}
+        </div>
+      </div>
       <p>Hello ${client?.name || "Client"},</p>
       <p>Please find your invoice details below.</p>
       <p><strong>Amount:</strong> ${totalLabel}</p>
@@ -124,6 +140,8 @@ export async function POST(
         </tbody>
       </table>
       ${invoice.notes ? `<p style="margin-top: 16px;"><strong>Notes:</strong> ${invoice.notes}</p>` : ""}
+      ${company?.paymentDetails ? `<div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e5e7eb;"><strong>Payment Details:</strong><p style="font-size: 13px; color: #6b7280; white-space: pre-wrap;">${company.paymentDetails}</p></div>` : ""}
+      ${company?.footnote ? `<p style="margin-top: 16px; font-size: 12px; color: #9ca3af; font-style: italic; text-align: center;">${company.footnote}</p>` : ""}
       ${invoiceUrl ? `<p style="margin-top: 16px;">Reference: <a href="${invoiceUrl}">${invoiceUrl}</a></p>` : ""}
     </div>
   `;

@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export interface IDailyTask extends Document {
   userId: Types.ObjectId;
   companyId: Types.ObjectId;
+  projectId?: Types.ObjectId;
   title: string;
   description?: string;
   workDate: Date;
@@ -17,6 +18,7 @@ const DailyTaskSchema = new Schema<IDailyTask>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     workDate: { type: Date, required: true },

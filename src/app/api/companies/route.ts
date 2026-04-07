@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   await connectDB();
 
   const body = await request.json();
-  const { name, code, address, currency, logo } = body;
+  const { name, code, address, billingAddress, logo, gstNumber, foreignRegistration, footnote, paymentDetails, currency } = body;
 
   if (!name?.trim() || !code?.trim()) {
     return NextResponse.json({ error: "Name and code are required" }, { status: 400 });
@@ -62,8 +62,13 @@ export async function POST(request: NextRequest) {
     name: name.trim(),
     code: code.toUpperCase().trim(),
     address,
-    currency: currency || "INR",
+    billingAddress,
     logo,
+    gstNumber,
+    foreignRegistration,
+    footnote,
+    paymentDetails,
+    currency: currency || "INR",
   });
 
   return NextResponse.json(company, { status: 201 });

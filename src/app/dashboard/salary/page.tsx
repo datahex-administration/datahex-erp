@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet, Play, Loader2 } from "lucide-react";
+import { Wallet, Play, Loader2, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
@@ -323,29 +323,31 @@ export default function SalaryPage() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  type="number"
-                                  min="0"
+                                  type="text"
+                                  inputMode="numeric"
                                   value={adj.deductions}
-                                  onChange={(e) =>
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/[^0-9.]/g, "");
                                     setAdjustments((prev) => ({
                                       ...prev,
-                                      [emp._id]: { ...prev[emp._id], deductions: e.target.value },
-                                    }))
-                                  }
+                                      [emp._id]: { ...prev[emp._id], deductions: v },
+                                    }));
+                                  }}
                                   className="h-8 w-[90px] text-right text-sm ml-auto"
                                 />
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  type="number"
-                                  min="0"
+                                  type="text"
+                                  inputMode="numeric"
                                   value={adj.bonus}
-                                  onChange={(e) =>
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(/[^0-9.]/g, "");
                                     setAdjustments((prev) => ({
                                       ...prev,
-                                      [emp._id]: { ...prev[emp._id], bonus: e.target.value },
-                                    }))
-                                  }
+                                      [emp._id]: { ...prev[emp._id], bonus: v },
+                                    }));
+                                  }}
                                   className="h-8 w-[90px] text-right text-sm ml-auto"
                                 />
                               </TableCell>
@@ -355,16 +357,16 @@ export default function SalaryPage() {
                               {paymentType === "partial" && (
                                 <TableCell className="text-right">
                                   <Input
-                                    type="number"
-                                    min="0"
-                                    max={net}
+                                    type="text"
+                                    inputMode="numeric"
                                     value={partialAmounts[emp._id] || ""}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                      const v = e.target.value.replace(/[^0-9.]/g, "");
                                       setPartialAmounts((prev) => ({
                                         ...prev,
-                                        [emp._id]: e.target.value,
-                                      }))
-                                    }
+                                        [emp._id]: v,
+                                      }));
+                                    }}
                                     className="h-8 w-[110px] text-right text-sm ml-auto"
                                   />
                                 </TableCell>
@@ -465,6 +467,7 @@ export default function SalaryPage() {
                               <TableHead className="text-right">Net</TableHead>
                               <TableHead className="text-right">Paid</TableHead>
                               <TableHead className="text-right">Status</TableHead>
+                              <TableHead className="w-[60px]"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -483,6 +486,19 @@ export default function SalaryPage() {
                                   {(emp.paidAmount ?? emp.netSalary).toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-right">{getStatusBadge(emp.status)}</TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Download Salary Slip"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(`/api/salary/process/${p._id}/slip?employeeId=${emp.employeeId}`, "_blank");
+                                    }}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>

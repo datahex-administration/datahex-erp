@@ -18,6 +18,7 @@ import {
   Printer,
   Edit,
   Trash2,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -71,6 +72,14 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     } else {
       const data = await res.json();
       toast.error(data.error || "Failed to delete");
+    }
+  };
+
+  const downloadInvoice = () => {
+    const w = window.open(`/api/invoices/${id}/pdf`, "_blank");
+    if (w) {
+      w.addEventListener("afterprint", () => w.close());
+      w.onload = () => setTimeout(() => w.print(), 400);
     }
   };
 
@@ -202,6 +211,9 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               </Button>
             </Link>
           )}
+          <Button variant="outline" size="sm" onClick={downloadInvoice}>
+            <Download className="h-4 w-4 mr-1" />Download
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1" />Print
           </Button>

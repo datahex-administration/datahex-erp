@@ -1,5 +1,6 @@
 import {
   Bell,
+  Bug,
   Building2,
   CalendarDays,
   Clock,
@@ -133,6 +134,14 @@ export const navigationGroups: NavigationGroup[] = [
         permission: null,
         description: "Internal and client communication",
         keywords: ["messages", "conversation"],
+      },
+      {
+        name: "Bug Reporting",
+        href: "/dashboard/bugs",
+        icon: Bug,
+        permission: "bugs:read",
+        description: "Track and manage bugs",
+        keywords: ["bugs", "issues", "defects", "qa", "testing"],
       },
     ],
   },
