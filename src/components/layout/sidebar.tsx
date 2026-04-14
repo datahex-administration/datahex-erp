@@ -363,7 +363,7 @@ export function Sidebar({
             <div className="p-1">
               <DropdownMenuItem
                 className="gap-2.5 rounded-xl px-3 py-2.5 cursor-pointer"
-                onSelect={async () => {
+                onClick={async () => {
                   try {
                     const res = await fetch(`/api/users/${user?._id || user?.id}/reset-pin`, {
                       method: "POST",
@@ -385,7 +385,7 @@ export function Sidebar({
               <DropdownMenuItem
                 variant="destructive"
                 className="gap-2.5 rounded-xl px-3 py-2.5 cursor-pointer"
-                onSelect={logout}
+                onClick={logout}
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>

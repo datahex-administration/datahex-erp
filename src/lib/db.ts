@@ -8,8 +8,10 @@ const CONNECTION_OPTIONS = {
   socketTimeoutMS: 10_000,
 } as const;
 const CONNECTION_CHECK_TIMEOUT_MS = 2_000;
+const HEALTH_CHECK_INTERVAL_MS = 30_000;
 
 let connectionPromise: Promise<typeof mongoose> | null = null;
+let lastHealthCheckAt = 0;
 
 function getMongoURI(): string {
   const uri = process.env.MONGODB_URI;
@@ -39,21 +41,28 @@ async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, label: s
 }
 
 async function reuseHealthyConnection() {
+  const now = Date.now();
+  if (now - lastHealthCheckAt < HEALTH_CHECK_INTERVAL_MS) {
+    return true;
+  }
+
   const admin = mongoose.connection.db?.admin();
 
   if (!admin) {
     console.warn("connectDB:open-connection-missing-admin");
     await mongoose.disconnect().catch(() => undefined);
+    lastHealthCheckAt = 0;
     return false;
   }
 
   try {
     await withTimeout(admin.command({ ping: 1 }), CONNECTION_CHECK_TIMEOUT_MS, "mongoose ping");
-    console.log("connectDB:connection-healthy");
+    lastHealthCheckAt = now;
     return true;
   } catch (error) {
     console.warn("connectDB:stale-open-connection", error);
     await mongoose.disconnect().catch(() => undefined);
+    lastHealthCheckAt = 0;
     return false;
   }
 }

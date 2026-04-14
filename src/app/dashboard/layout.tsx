@@ -7,7 +7,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Bell, Loader2, Menu, Search } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 
@@ -23,7 +23,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState<AnyObj[]>([]);
   const [notifCount, setNotifCount] = useState(0);
-  const pathname = usePathname();
 
   const fetchNotifs = useCallback(() => {
     fetch("/api/notifications?limit=5")
@@ -36,8 +35,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
-    if (user) fetchNotifs();
-  }, [user, pathname, fetchNotifs]);
+    if (!user) return;
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 60_000);
+    return () => clearInterval(interval);
+  }, [user, fetchNotifs]);
 
   useEffect(() => {
     if (!loading && !user) {

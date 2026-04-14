@@ -48,21 +48,31 @@ export function MobileBottomNav() {
   const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
-    fetch("/api/attendance/today")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.status === "clocked_in") setClockedIn(true);
-        else setClockedIn(false);
-      })
-      .catch(() => {});
+    let cancelled = false;
 
-    fetch("/api/notifications?limit=1&unread=true")
-      .then((r) => r.json())
-      .then((data) => {
-        setNotifCount(data?.total || 0);
-      })
-      .catch(() => {});
-  }, [pathname]);
+    function fetchStatus() {
+      fetch("/api/attendance/today")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled) setClockedIn(data?.status === "clocked_in");
+        })
+        .catch(() => {});
+
+      fetch("/api/notifications?limit=1&unread=true")
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled) setNotifCount(data?.total || 0);
+        })
+        .catch(() => {});
+    }
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   function isActive(item: (typeof NAV_ITEMS)[0]) {
     if (item.matchExact) return pathname === item.href;
