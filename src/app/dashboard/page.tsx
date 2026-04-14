@@ -88,17 +88,19 @@ export default function DashboardPage() {
             {company ? ` — ${company.name}` : ""}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard/invoices/new">
-            <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Invoice</Button>
-          </Link>
-          <Link href="/dashboard/projects/new">
-            <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Project</Button>
-          </Link>
-          <Link href="/dashboard/employees/new">
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Employee</Button>
-          </Link>
-        </div>
+        {user?.role !== "customer_success" && user?.role !== "staff" && (
+          <div className="flex gap-2">
+            <Link href="/dashboard/invoices/new">
+              <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Invoice</Button>
+            </Link>
+            <Link href="/dashboard/projects/new">
+              <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" />Project</Button>
+            </Link>
+            <Link href="/dashboard/employees/new">
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />Employee</Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Attendance Widget */}
